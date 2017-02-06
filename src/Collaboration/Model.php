@@ -110,6 +110,10 @@ abstract class Model extends PersistModel{
                 if(!$hasAccess && array_key_exists("function", $accessMasks)){
                 	foreach ($accessMasks["function"] as $function){
                 		$result = Reflection::invokeArgs($className, $function, $object, $args);
+                		if(is_string($result)){
+                			$hasAccess = $result;
+                			break;
+                		}
                 		if(isset($result) && $result){
                 			$hasAccess = true;
                 			break;

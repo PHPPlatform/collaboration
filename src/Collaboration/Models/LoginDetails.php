@@ -44,6 +44,7 @@ class LoginDetails extends Model {
     /**
      * @columnName PASSWORD
      * @type varchar
+     * @set
      */
     private $password = null;
     
@@ -89,7 +90,7 @@ class LoginDetails extends Model {
     		 * @var LoginDetails $loginDetails
     		 */
     		$loginDetails = parent::create($data);
-    		$loginDetails->setAttribute("password", $loginDetails->hashPassword($data["password"]));
+    		$loginDetails->setAttribute("password", $data["password"]);
     		
     		$createToken = $loginDetails->personId.md5($loginDetails->personId.rand(1,1000).MySql::getMysqlDate(null,true).$loginDetails->id);
     		
@@ -275,7 +276,7 @@ class LoginDetails extends Model {
      */
     function changeLoginName($newLoginName,$password){
     	self::UpdateAccess(); // force the access check
-    	if($this->hashPassword($password) != $this->getAttribute("password")){
+    	if($this->hashPassword($password) != $this->password){
     		throw new NoAccessException("Invalid Password");
     	}
     	try{
@@ -311,9 +312,8 @@ class LoginDetails extends Model {
     	
     	// to compensate timing attack
     	time_nanosleep(0, rand(0,1000));
-    	
     	if($this->password !== $encryptedPassword ){
-    		throw new NoAccessException();
+    		throw new NoAccessException('Invalid loginName or password');
     	}
     	
     	$loggedInTime = MySql::getMysqlDate(null,true);
@@ -536,7 +536,7 @@ class LoginDetails extends Model {
         $sessionPerson = Session::getInstance()->get(Session::SESSION_PERSON);
         if($sessionPerson){
             $loginDetailsClass = get_class();
-            $sessionPersonId = $sessionPerson['personId'];
+            $sessionPersonId = $sessionPerson['id'];
 
             $sessionPersonIdExpr = "{".$loginDetailsClass."."."personId"."}";
             
@@ -549,7 +549,7 @@ class LoginDetails extends Model {
     protected function canEdit($args){
     	$sessionPerson = Session::getInstance()->get(Session::SESSION_PERSON);
     	if($sessionPerson){
-    		$sessionPersonId = $sessionPerson['personId'];
+    		$sessionPersonId = $sessionPerson['id'];
     		return $sessionPersonId == $this->personId;
     	}
     	return false;

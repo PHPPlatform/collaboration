@@ -36,5 +36,5 @@
 			"PhpPlatform\\Tests\\" : "tests/"
 		}
 	},
-	"minimum-stability" : "stable"
+	"minimum-stability" : "dev"
 }

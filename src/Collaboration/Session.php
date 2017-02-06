@@ -143,5 +143,9 @@ class Session extends Cache{
 		return $this->id;
 	}
 	
+	public function reset(){
+		return $this->refresh(false,true);
+	}
+	
 	
 }

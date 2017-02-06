@@ -40,7 +40,8 @@ abstract class TestBase extends PersistUnitTestCase{
     function setUp(){
     	parent::setUp();
 	    // clear session
-    	$result = Session::getInstance()->reset();
+    	$thisInstance = Session::getInstance();
+    	Reflection::invokeArgs(get_parent_class($thisInstance), 'reset', $thisInstance);
     }
     
     public function setSystemAdminSession(){
