@@ -1,0 +1,8 @@
+/vendor/
+/fileStore/
+/logs/
+.idea
+.buildpath
+.project
+.settings/
+sessions/

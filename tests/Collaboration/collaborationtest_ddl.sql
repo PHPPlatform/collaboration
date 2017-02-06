@@ -1,0 +1,19 @@
+SET FOREIGN_KEY_CHECKS=0;
+
+CREATE TABLE sample (
+  property1 bigint(10) NOT NULL AUTO_INCREMENT,
+  property2 varchar(100) NOT NULL,
+  PRIMARY KEY (`property1`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+
+CREATE TABLE sample_account
+(
+    ID bigint(10) unsigned NOT NULL AUTO_INCREMENT,
+    ACCOUNT_ID bigint(10) unsigned NOT NULL,
+    NAME varchar(20),
+    PRIMARY KEY (ID),
+    UNIQUE (ID, ACCOUNT_ID)
+);
+
+ALTER TABLE sample_account
+  ADD CONSTRAINT sample_account_ibfk_1 FOREIGN KEY (ACCOUNT_ID) REFERENCES account (ID) ON DELETE CASCADE ON UPDATE CASCADE;

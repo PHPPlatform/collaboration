@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<mysqldump xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<database name="collaborationtest">
+    <table_data name="account">
+    <row>
+        <field name="ID">2</field>
+        <field name="ACCOUNT_NAME">sample</field>
+        <field name="CREATED">2017-01-31 08:39:23</field>
+        <field name="MODIFIED">2017-01-31 08:39:23</field>
+        <field name="CREATED_BY_ID">1</field>
+        <field name="CONTACT_ID" xsi:nil="true" />
+    </row>
+    </table_data>
+    <table_data name="contact">
+    </table_data>
+    <table_data name="groups">
+    </table_data>
+    <table_data name="groups_accounts">
+    </table_data>
+    <table_data name="login_details">
+    </table_data>
+    <table_data name="login_history">
+    </table_data>
+    <table_data name="organization">
+    </table_data>
+    <table_data name="organization_person">
+    </table_data>
+    <table_data name="person">
+    </table_data>
+    <table_data name="person_role">
+    </table_data>
+    <table_data name="role">
+    </table_data>
+    
+    <!-- Sample table for testing -->
+    <table_data name="sample">
+    <row>
+        <field name="property1">1</field>
+        <field name="property2">Variable Characters 001</field>
+    </row>
+    <row>
+        <field name="property1">2</field>
+        <field name="property2">Variable Characters 002</field>
+    </row>
+    <row>
+        <field name="property1">3</field>
+        <field name="property2">Variable Characters 003</field>
+    </row>
+    <row>
+        <field name="property1">4</field>
+        <field name="property2">Variable Characters 004</field>
+    </row>
+    </table_data>
+    
+    <table_data name="sample_account">
+    <row>
+        <field name="ID">1</field>
+        <field name="ACCOUNT_ID">2</field>
+        <field name="NAME">Abcd</field>
+    </row>
+    </table_data>
+    
+</database>
+</mysqldump>

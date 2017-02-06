@@ -1,0 +1,28 @@
+language: php
+
+php:
+  - '5.3'
+  - '5.4'
+  - '5.6'
+  - '7.0'
+  - '7.1'
+  - 'nightly'
+  
+services:
+  - mysql
+
+env:
+  - MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_USERNAME=root MYSQL_PASSWORD=NO_PASSWORD sqlLogFile=/home/travis/builds/PHPPlatform/collaboration/sqllog.txt
+
+after_failure: 
+  - "cat /home/travis/builds/PHPPlatform/collaboration/sqllog.txt"
+
+before_script:
+  - composer update
+  - mkdir sessions
+#  - cp ClassLoader.php vendor/composer/ClassLoader.php
+#  - cp ModelTest.php vendor/php-platform/persist-unit/src/Tests/PersistUnit/ModelTest.php
+#  - cp ErrorHandler.php vendor/php-platform/errors/src/Errors/ErrorHandler.php
+
+script:
+  - ./vendor/bin/phpunit -c phpunit.xml 

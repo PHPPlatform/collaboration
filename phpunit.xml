@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<phpunit colors="true" bootstrap="vendor/autoload.php" >
+    <php>
+        <const name="WEB_RESOURCE_PATH" value=""/>
+        <const name="WEB_SERVER_FILEPATH" value=""/>
+        <const name="MYSQL_HOST" value=""/>
+	    <const name="MYSQL_PORT" value=""/>
+	    <const name="MYSQL_USERNAME" value=""/>
+	    <const name="MYSQL_PASSWORD" value=""/>
+    </php>
+    <testsuites>
+        <testsuite name="php-platform\collaboration">
+            <directory suffix=".php">./tests</directory>
+        </testsuite>
+    </testsuites>
+    <filter>
+        <whitelist>
+            <directory suffix=".php">./src/</directory>
+        </whitelist>
+    </filter>
+</phpunit>

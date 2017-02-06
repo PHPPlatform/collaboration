@@ -1,0 +1,40 @@
+{
+	"name" : "php-platform/collaboration",
+	"type" : "library",
+	"keywords" : [
+		"access",
+		"OOP",
+		"collaboration",
+		"PHP hibernate",
+		"user",
+		"role",
+		"group"
+	],
+	"homepage" : "https://github.com/PHPPlatform/collaboration",
+	"authors" : [{
+			"name" : "Raghavendra K R",
+			"email" : "krraghavendra@yahoo.co.in",
+			"homepage" : "http://krraghavendra.in",
+			"role" : "Software Developer"
+		}
+	],
+	"require" : {
+		"php" : ">=5.3",
+		"php-platform/config" : "~0.1",
+		"php-platform/persist" : "~0.1"
+	},
+	"require-dev" : {
+		"php-platform/persist-unit" : "~0.1"
+	},
+	"autoload" : {
+		"psr-4" : {
+			"PhpPlatform\\" : "src/"
+		}
+	},
+	"autoload-dev" : {
+		"psr-4" : {
+			"PhpPlatform\\Tests\\" : "tests/"
+		}
+	},
+	"minimum-stability" : "stable"
+}

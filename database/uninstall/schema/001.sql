@@ -1,0 +1,13 @@
+
+DROP TABLE IF EXISTS groups_accounts;
+DROP TABLE IF EXISTS groups;
+DROP TABLE IF EXISTS organization_person;
+DROP TABLE IF EXISTS organization;
+DROP TABLE IF EXISTS login_history;
+DROP TABLE IF EXISTS login_details;
+DROP TABLE IF EXISTS person_role;
+DROP TABLE IF EXISTS person;
+DROP TABLE IF EXISTS role;
+DROP TABLE IF EXISTS account;
+DROP TABLE IF EXISTS contact;
+DROP TABLE IF EXISTS person_temp;

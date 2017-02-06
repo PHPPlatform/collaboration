@@ -1,0 +1,9 @@
+{
+    "saveLoginHistory" : true,
+    "passwordResetRequestLifetime": 900,
+    "passwordResetRequestValidationLifetime" : 120,
+    "session" : {
+        "cookieLifetime" : 600,
+        "savePath" : "sessions"
+    }
+}
