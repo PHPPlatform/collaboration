@@ -10,10 +10,14 @@ use PhpPlatform\Errors\Exceptions\Persistence\BadQueryException;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Collaboration\Models\Person;
 use PhpPlatform\Collaboration\Models\LoginHistory;
+use PhpPlatform\Persist\MySql;
+use PhpPlatform\Config\Settings;
+use PhpPlatform\Errors\Exceptions\Application\BadInputException;
+use PhpPlatform\Persist\Reflection;
 
 class TestLoginDetails extends TestBase {
 	
-	function _testConstructor(){
+	function testConstructor(){
 		// construct without session
 		$isException = false;
 		try{
@@ -37,7 +41,7 @@ class TestLoginDetails extends TestBase {
 		parent::assertTrue(!$isException);
 	}
 	
-	function _testCreate(){
+	function testCreate(){
 		// create without session
 		$isException = false;
 		try{
@@ -133,7 +137,275 @@ class TestLoginDetails extends TestBase {
 		
 		$loginDetails = LoginDetails::find(array("loginName"=>"testPerson1"));
 		parent::assertCount(1,$loginDetails);
-		
 	}
+	
+	function testGetAttributes(){
+		$systemAdminLoginDetails = null;
+		TransactionManager::executeInTransaction(function () use (&$systemAdminLoginDetails){
+			$systemAdminLoginDetails = new LoginDetails('systemAdmin');
+		},array(),true);
+		
+		parent::assertEquals(array(
+		    "id" => 1,
+		    "personId" => 1,
+		    "loginName" => "systemAdmin",
+		    "status" => "ACTIVE"
+		),$systemAdminLoginDetails->getAttributes("*"));
+	}
+	
+	function testDelete(){
+		$systemAdminLoginDetails = null;
+		$testPersonLoginDetails = null;
+		
+		TransactionManager::executeInTransaction(function () use (&$systemAdminLoginDetails,&$testPersonLoginDetails){
+			$systemAdminLoginDetails = new LoginDetails('systemAdmin');
+			
+			$personObj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
+			$testPersonLoginDetails = LoginDetails::create(array("personId"=>$personObj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
+			
+		},array(),true);
+		
+		
+		// delete without session
+		$isException = false;
+		try{
+			$systemAdminLoginDetails->delete();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		
+		$isException = false;
+		try{
+			$testPersonLoginDetails->delete();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		
+		// delete with test person login
+		Person::login('testPerson1', '123');
+		$isException = false;
+		try{
+			$systemAdminLoginDetails->delete();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		
+		$isException = false;
+		try{
+			$testPersonLoginDetails->delete();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		
+		// test with systemAdmin login
+		$this->setSystemAdminSession();
+		$isException = false;
+		try{
+			$systemAdminLoginDetails->delete();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		
+		
+		$isException = false;
+		try{
+			$testPersonLoginDetails->delete();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		
+		$loginDetailsList = null;
+		TransactionManager::executeInTransaction(function () use(&$loginDetailsList){
+			$loginDetailsList = LoginDetails::find(array("loginName"=>array(LoginDetails::OPERATOR_IN=>array('systemAdmin','testPerson1'))));
+		},array(),true);
+		
+		parent::assertTrue(is_array($loginDetailsList));
+		parent::assertCount(0,$loginDetailsList);
+	}
+	
+	public function testPasswordReset(){
+	
+		/**
+		 * Data
+		 */
+		$testPersonLoginDetails = null;
+		
+		TransactionManager::executeInTransaction(function () use (&$systemAdminLoginDetails,&$testPersonLoginDetails){
+			$systemAdminLoginDetails = new LoginDetails('systemAdmin');
+			
+			$personObj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
+			$testPersonLoginDetails = LoginDetails::create(array("personId"=>$personObj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
+			
+		},array(),true);
+	
+		/**
+		 * Request Password reset
+		 */
+		// request password reset for non-existing details, should result in exception
+		$isException = false;
+		try{
+			$token = LoginDetails::requestPasswordReset("noLoginName");
+		}catch (DataNotFoundException $e){
+			$isException = true;
+		}
+		$this->assertTrue($isException);
+	
+		//make a password reset request for status not ACTIVE
+		$isException = false;
+		try{
+			$token = LoginDetails::requestPasswordReset("testPerson1");
+		}catch (DataNotFoundException $e){
+			$isException = true;
+		}
+		$this->assertTrue($isException);
+		
+		// make the test person login details active
+		TransactionManager::executeInTransaction(function () use (&$testPersonLoginDetails){
+			$testPersonLoginDetails->activate();
+		},array(),true);
+		
+		//make a password reset request
+		$token = LoginDetails::requestPasswordReset("testPerson1");
+	
+		$loginHistories = array();
+		TransactionManager::executeInTransaction(function () use (&$loginHistories,&$testPersonLoginDetails){
+			$loginHistories = LoginHistory::find(array("logindetailsId"=>$testPersonLoginDetails->getAttribute("id"),"type"=>LoginHistory::LH_PASSWORD_RESET_REQUEST));
+		},array(),true);
+		
+		$this->assertCount(1,$loginHistories);
+		$loginId = $testPersonLoginDetails->getAttribute("id");
+		$loginName = $testPersonLoginDetails->getAttribute("loginName");
+		$this->assertEquals($loginId.md5($loginId.$loginName.$token),$loginHistories[0]->getAttribute("sessionId"));
+	
+		/**
+		 * Validate password reset token
+		 */
+		// validate with wrong token
+		$isException = false;
+		try{
+			LoginDetails::validatePasswordResetToken($loginName,'ABCD');
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		$this->assertTrue($isException);
+	
+		//validate with expired token
+		$expiredToken = LoginDetails::requestPasswordReset($loginName);
+		// manually expire the token
+		TransactionManager::executeInTransaction(function () use (&$expiredToken,$loginId,$loginName){
+			$loginHistories = LoginHistory::find(array("sessionId"=>$loginId.md5($loginId.$loginName.$expiredToken)));
+			
+			$currentTime = time();
+			$tokenLifetime = Settings::getSettings('php-platform/collaboration','passwordResetRequestLifetime');
+			$expiredTime = $currentTime - $tokenLifetime -1;
+			$expiredTime = date('d-M-Y H:i:s',$expiredTime);
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginHistories[0],array(array("time"=>MySql::getMysqlDate($expiredTime,true))));
+		},array(),true);
+		
+		$isException = false;
+		try{
+			LoginDetails::validatePasswordResetToken($loginName,$expiredToken);
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		$this->assertTrue($isException);
+	
+		//validate correct token
+		$validationToken = LoginDetails::validatePasswordResetToken($loginName,$token);
+	
+		/**
+		 * Reset Password
+		 */
+		// reset with wrong tokens
+		
+		$isException = false;
+		try{
+			LoginDetails::resetPassword($loginName,'aaa','bbb','newPWD001');
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		$this->assertTrue($isException);
+	
+		$isException = false;
+		try{
+			LoginDetails::resetPassword($loginName,$token,'bbb','newPWD001');
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		$this->assertTrue($isException);
+	
+		$isException = false;
+		try{
+			LoginDetails::resetPassword($loginName,'aaa',$validationToken,'newPWD001');
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		$this->assertTrue($isException);
+	
+		$isException = false;
+		try{
+			LoginDetails::resetPassword('abcd',$token,$validationToken,'newPWD001');
+		}catch (DataNotFoundException $e){
+			$isException = true;
+		}
+		$this->assertTrue($isException);
+	
+	
+		//manually expire the validation token
+		$loginHistories = null;
+		$validTime = null;
+		TransactionManager::executeInTransaction(function () use (&$loginHistories,&$validTime,&$validationToken,$loginId,$loginName){
+			$loginHistories = LoginHistory::find(array("sessionId"=>$loginId.md5($loginId.$validationToken.$loginName)));
+
+			$validTime = $loginHistories[0]->getAttribute('time');
+			
+			$currentTime = time();
+			$tokenLifetime = Settings::getSettings('php-platform/collaboration','passwordResetRequestValidationLifetime');
+			$expiredTime = $currentTime - $tokenLifetime -1;
+			$expiredTime = date('d-M-Y H:i:s',$expiredTime);
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginHistories[0],array(array("time"=>MySql::getMysqlDate($expiredTime,true))));
+		},array(),true);
+		
+	
+		$isException = false;
+		try{
+			LoginDetails::resetPassword($loginName,$token,$validationToken,'newPWD001');
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		$this->assertTrue($isException);
+	
+		//manually reset expired token
+		TransactionManager::executeInTransaction(function () use (&$loginHistories,&$validTime){
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginHistories[0],array(array("time"=>MySql::getMysqlDate($validTime,true))));
+		},array(),true);
+		
+	    // reset password
+		LoginDetails::resetPassword($loginName,$token,$validationToken,'newPWD002');
+	
+		// validate the new password works 
+		TransactionManager::executeInTransaction(function () use (&$systemAdminLoginDetails,&$testPersonLoginDetails){
+			$testPersonLoginDetails = new LoginDetails("testPerson1");
+		},array(),true);
+		
+		$isException = false;
+		try{
+			$testPersonLoginDetails->login('newPWD002');
+		}catch (\Exception $e){
+			$isException = true;
+		}
+		$this->assertTrue(!$isException);
+	}
+	
 	
 }

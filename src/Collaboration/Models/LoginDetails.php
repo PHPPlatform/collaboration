@@ -90,7 +90,7 @@ class LoginDetails extends Model {
     		 * @var LoginDetails $loginDetails
     		 */
     		$loginDetails = parent::create($data);
-    		$loginDetails->setAttribute("password", $data["password"]);
+    		$loginDetails->changePassword($data["password"]);
     		
     		$createToken = $loginDetails->personId.md5($loginDetails->personId.rand(1,1000).MySql::getMysqlDate(null,true).$loginDetails->id);
     		
@@ -122,30 +122,7 @@ class LoginDetails extends Model {
     static function find($filters,$sort = null,$pagination = null, $where = null){
     	return parent::find($filters, $sort, $pagination, $where);
     }
-
-    function setAttribute($name,$value){
-        $args = array();
-        $args[$name] = $value;
-        $this->setAttributes($args);
-    }
-
-    /**
-     * @param $args
-     * @throws \Exception
-     *
-     * @access ("person|systemAdmin","function|canEdit")
-     */
-    function setAttributes($args){
-        if(isset($args["password"])){
-            $args["password"] = $this->hashPassword($args["password"]);
-        }
-        if(array_key_exists("status", $args)){
-        	// for setting status , use dedicated methods , activate, disable
-        	unset($args["status"]);
-        }
-        parent::setAttributes($args);
-    }
-
+    
     function getAttribute($name){
         return parent::getAttribute($name);
     }
@@ -364,6 +341,12 @@ class LoginDetails extends Model {
     }
     
     
+    static function authenticate($loginName,$password){
+    	$loginDetails = new LoginDetails($loginName);
+    	return $loginDetails->hashPassword($password) == $loginDetails->password;
+    }
+    
+    
     // password reset functions //
     
     static function requestPasswordReset($loginName){
@@ -500,7 +483,7 @@ class LoginDetails extends Model {
             }
 
             // If everything is ok , reset password
-            $loginDetails->setAttribute("password",$newPassword);
+            $loginDetails->changePassword($newPassword);
 
             LoginHistory::create(array(
             		"logindetailsId" => $loginId,
@@ -513,18 +496,20 @@ class LoginDetails extends Model {
             throw $e;
         }
     }
-
-
-    public function changePassword($oldPassword,$newPassword){
+    
+    /**
+     * @param string $newPassword
+     * @access ("person|systemAdmin","function|canChangePassword")
+     */
+    public function changePassword($newPassword){
         // to compensate timing attack
         time_nanosleep(0, rand(0,1000));
+        
+        $password = $this->hashPassword($newPassword);
+        parent::setAttributes(array("password"=>$password));
 
-        if($this->password == $this->hashPassword($oldPassword)){
-            $this->setAttribute("password",$newPassword);
-        }else{
-            throw new BadInputException("Old Password is wrong");
-        }
     }
+    
     
     // access functions //
 
@@ -553,6 +538,10 @@ class LoginDetails extends Model {
     		return $sessionPersonId == $this->personId;
     	}
     	return false;
+    }
+    
+    protected function canChangePassword($newPassword){
+    	return $this->canEdit(array());
     }
     
     protected function canDelete(){

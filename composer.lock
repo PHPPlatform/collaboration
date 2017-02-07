@@ -189,12 +189,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPPlatform/persist.git",
-                "reference": "68e4432f33703d08b5c239664634185a9784b312"
+                "reference": "8f2161cff3493b316d6a7293d6d566460b5b0ebe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPPlatform/persist/zipball/68e4432f33703d08b5c239664634185a9784b312",
-                "reference": "68e4432f33703d08b5c239664634185a9784b312",
+                "url": "https://api.github.com/repos/PHPPlatform/persist/zipball/8f2161cff3493b316d6a7293d6d566460b5b0ebe",
+                "reference": "8f2161cff3493b316d6a7293d6d566460b5b0ebe",
                 "shasum": ""
             },
             "require": {
@@ -230,7 +230,7 @@
                 "php-platform",
                 "relational Schema"
             ],
-            "time": "2017-02-06 14:48:26"
+            "time": "2017-02-07 13:50:28"
         }
     ],
     "packages-dev": [
