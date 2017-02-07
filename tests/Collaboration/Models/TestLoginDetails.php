@@ -82,11 +82,12 @@ class TestLoginDetails extends TestBase {
 		parent::assertEquals(null, $loginDetails->getAttribute('password'));
 		
 		// assert login history
-		TransactionManager::executeInTransaction(function () use (&$loginDetails){
+		$loginHistories = null;
+		TransactionManager::executeInTransaction(function () use (&$loginDetails,&$loginHistories){
 			$loginHistories = LoginHistory::find(array('logindetailsId'=>$loginDetails->getAttribute('id'),'type'=>LoginHistory::LH_REGISTRATION));
-			parent::assertCount(1, $loginHistories);
 		},array(),true);
-		
+		parent::assertCount(1, $loginHistories);
+			
 		// create another test person account
 		$personObj2 = null;
 		TransactionManager::executeInTransaction(function () use (&$personObj2){
