@@ -539,7 +539,7 @@ class LoginDetails extends Model {
         return false;
     }
     
-    protected function canEdit($args){
+    protected function canEdit($args = array()){
     	$sessionPerson = Session::getInstance()->get(Session::SESSION_PERSON);
     	if($sessionPerson){
     		$sessionPersonId = $sessionPerson['id'];
