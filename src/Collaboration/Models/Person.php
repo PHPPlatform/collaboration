@@ -191,7 +191,7 @@ class Person extends Account {
     function addRoles($roles){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
     	if(!is_array($roles)) throw new BadInputException("$roles is not array");
-    	parent::UpdateAccess(); // explicitly check for update access
+    	if(!self::UpdateAccess()){ throw new NoAccessException('No access to add roles');} // force the access check
     	
     	try{
     		TransactionManager::startTransaction(null,true);
@@ -217,7 +217,7 @@ class Person extends Account {
     function removeRoles($roles){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
     	if(!is_array($roles)) throw new BadInputException("$roles is not array");
-    	parent::UpdateAccess(); // explicitly check for update access
+    	if(!self::UpdateAccess()){ throw new NoAccessException('No access to remove');} // force the access check
     	 
     	try{
     		TransactionManager::startTransaction(null,true);

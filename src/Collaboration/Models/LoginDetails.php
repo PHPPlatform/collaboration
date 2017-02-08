@@ -260,7 +260,7 @@ class LoginDetails extends Model {
      * @access ("person|systemAdmin","function|canEdit")
      */
     function changeLoginName($newLoginName,$password){
-    	self::UpdateAccess(); // force the access check
+    	if(!self::UpdateAccess()){ throw new NoAccessException('No access to change login name');} // force the access check
     	if($this->hashPassword($password) != $this->password){
     		throw new NoAccessException("Invalid Password");
     	}

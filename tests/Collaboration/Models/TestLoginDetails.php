@@ -14,6 +14,7 @@ use PhpPlatform\Persist\MySql;
 use PhpPlatform\Config\Settings;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Persist\Reflection;
+use PhpPlatform\Persist\Exception\ObjectStateException;
 
 class TestLoginDetails extends TestBase {
 	
@@ -241,8 +242,7 @@ class TestLoginDetails extends TestBase {
 		 */
 		$testPersonLoginDetails = null;
 		
-		TransactionManager::executeInTransaction(function () use (&$systemAdminLoginDetails,&$testPersonLoginDetails){
-			$systemAdminLoginDetails = new LoginDetails('systemAdmin');
+		TransactionManager::executeInTransaction(function () use (&$testPersonLoginDetails){
 			
 			$personObj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
 			$testPersonLoginDetails = LoginDetails::create(array("personId"=>$personObj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
@@ -395,7 +395,7 @@ class TestLoginDetails extends TestBase {
 		LoginDetails::resetPassword($loginName,$token,$validationToken,'newPWD002');
 	
 		// validate the new password works 
-		TransactionManager::executeInTransaction(function () use (&$systemAdminLoginDetails,&$testPersonLoginDetails){
+		TransactionManager::executeInTransaction(function () use (&$testPersonLoginDetails){
 			$testPersonLoginDetails = new LoginDetails("testPerson1");
 		},array(),true);
 		
@@ -769,6 +769,103 @@ class TestLoginDetails extends TestBase {
 		TransactionManager::executeInTransaction(function () use (&$loginDetails,&$status){
 			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>$status)));
 		},array(),true);
+	}
+	
+	function testChangeLoginName(){
+		/**
+		 * data
+		 */
+		$testPerson1LoginDetails = null;
+		$testPerson2LoginDetails = null;
+		
+		TransactionManager::executeInTransaction(function () use (&$testPerson1LoginDetails,&$testPerson2LoginDetails){
+			$person1Obj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
+			$testPerson1LoginDetails = LoginDetails::create(array("personId"=>$person1Obj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
+		
+			$person2Obj = Person::create(array("accountName"=>"testPerson2","name"=>"Test Person 2"));
+			$testPerson2LoginDetails = LoginDetails::create(array("personId"=>$person2Obj->getAttribute("id"),"loginName"=>"testPerson2","password"=>"abc"));
+		
+		},array(),true);
+		
+		// change name with out session
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->changeLoginName('newLoginName1', '123');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// change name with system admin session
+		$this->setSystemAdminSession();
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->changeLoginName('newLoginName1', '123');
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->getAttribute('loginName');
+		}catch (ObjectStateException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		$isException = false;
+		try{
+			Person::login('testPerson1', '123');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// login from test person 1
+		Person::login('newLoginName1', '123');
+		
+		// change the name of test person 2
+		$isException = false;
+		try{
+			$testPerson2LoginDetails->changeLoginName('newLoginName2', 'abc');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// login from test person 2
+		Person::login('testPerson2', 'abc');
+		
+		// change the name of test person 2 with wrong password
+		$isException = false;
+		try{
+			$testPerson2LoginDetails->changeLoginName('newLoginName2', 'wrong-password');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// change the name of test person 2 with right password
+		$isException = false;
+		try{
+			$testPerson2LoginDetails->changeLoginName('newLoginName2', 'abc');
+		}catch (\Exception $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		$isException = false;
+		try{
+			Person::login('testPerson2', 'abc');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// login from test person 2
+		Person::login('newLoginName2', 'abc');
+		
+		
 	}
 	
 	

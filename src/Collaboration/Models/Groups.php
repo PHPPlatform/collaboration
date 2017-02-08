@@ -7,6 +7,7 @@ namespace PhpPlatform\Collaboration\Models;
 
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Persist\Exception\ObjectStateException;
+use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 
 /**
  * @tableName groups
@@ -175,7 +176,7 @@ class Groups extends Account {
      */
     function addAccount($account){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
-    	parent::UpdateAccess(); // explicitly check for update access
+    	if(!self::UpdateAccess()){ throw new NoAccessException('No access to add account');} // force the access check
     	try{
     		TransactionManager::startTransaction(null,true);
     		
@@ -222,7 +223,7 @@ class Groups extends Account {
      */
     function removeAccount($account){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
-    	parent::UpdateAccess(); // explicitly check for update access
+    	if(!self::UpdateAccess()){ throw new NoAccessException('No access to remove account');} // force the access check
     	try{
     		TransactionManager::startTransaction(null,true);
     

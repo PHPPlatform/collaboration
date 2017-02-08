@@ -8,6 +8,7 @@ namespace PhpPlatform\Collaboration\Models;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Persist\Exception\ObjectStateException;
+use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 
 /**
  * @tableName organization
@@ -195,7 +196,7 @@ class Organization extends Account {
      */
     function addChildren($children){
         if(!is_array($children)) throw new BadInputException("$children is not array");
-        parent::UpdateAccess(); // explicitly check for update access 
+        if(!self::UpdateAccess()){ throw new NoAccessException('No access to add children');} // force the access check
         try{
             TransactionManager::startTransaction();
             foreach($children as $child){
@@ -215,7 +216,7 @@ class Organization extends Account {
      */
     function removeChildren($children){
         if(!is_array($children)) throw new BadInputException("$children is not array");
-        parent::UpdateAccess(); // explicitly check for update access
+        if(!self::UpdateAccess()){ throw new NoAccessException('No access to remove children');} // force the access check
         try{
             TransactionManager::startTransaction();
             foreach($children as $child){
@@ -260,7 +261,7 @@ class Organization extends Account {
     function addPeople($people){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
         if(!is_array($people)) throw new BadInputException("$people is not array");
-        parent::UpdateAccess(); // explicitly check for update access
+        if(!self::UpdateAccess()){ throw new NoAccessException('No access to add people');} // force the access check
         try{
             TransactionManager::startTransaction(null,true);
             foreach($people as $person){
@@ -284,7 +285,7 @@ class Organization extends Account {
     function removePeople($people){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
         if(!is_array($people)) throw new BadInputException("$people is not array");
-        parent::UpdateAccess(); // explicitly check for update access
+        if(!self::UpdateAccess()){ throw new NoAccessException('No access to remove people');} // force the access check
         try{
             TransactionManager::startTransaction(null,true);
             foreach($people as $person){
