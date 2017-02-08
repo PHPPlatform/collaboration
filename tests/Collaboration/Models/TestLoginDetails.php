@@ -409,4 +409,367 @@ class TestLoginDetails extends TestBase {
 	}
 	
 	
+	function testChangePassword(){
+		$systemAdminLoginDetails = null;
+		$testPersonLoginDetails = null;
+		
+		TransactionManager::executeInTransaction(function () use (&$systemAdminLoginDetails,&$testPersonLoginDetails){
+			$systemAdminLoginDetails = new LoginDetails('systemAdmin');
+			$personObj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
+			$testPersonLoginDetails = LoginDetails::create(array("personId"=>$personObj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
+		},array(),true);
+		
+		// Change Password without session
+		$isException = false;
+		try{
+			$systemAdminLoginDetails->changePassword("newSystemAdminPass");
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		
+		$isException = false;
+		try{
+			$testPersonLoginDetails->changePassword("newTestPersonPass");
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		
+		// Change Password with test person login
+		Person::login('testPerson1', '123');
+		$isException = false;
+		try{
+			$systemAdminLoginDetails->changePassword("newSystemAdminPass");
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		
+		$isException = false;
+		try{
+			$testPersonLoginDetails->changePassword("newTestPersonPass");
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		Person::login('testPerson1', 'newTestPersonPass');
+		
+		
+		// test with systemAdmin login
+		$this->setSystemAdminSession();
+		$isException = false;
+		try{
+			$systemAdminLoginDetails->changePassword("newSystemAdminPass");
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		Person::login('systemAdmin', 'newSystemAdminPass');
+		
+	}
+	
+	
+	function testVerify(){
+		/**
+		 * data
+		 */
+		$testPerson1LoginDetails = null;
+		$testPerson2LoginDetails = null;
+		$testPerson1CreateToken = null;
+		$testPerson2CreateToken = null;
+		
+		
+		TransactionManager::executeInTransaction(function () use (&$testPerson1LoginDetails,&$testPerson2LoginDetails,&$testPerson1CreateToken,&$testPerson2CreateToken){
+			$person1Obj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
+			$testPerson1LoginDetails = LoginDetails::create(array("personId"=>$person1Obj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
+
+			$loginHistory = LoginHistory::find(array("logindetailsId"=>$testPerson1LoginDetails->getAttribute("id"),"type"=>LoginHistory::LH_REGISTRATION));
+			$testPerson1CreateToken = $loginHistory[0]->getAttribute("sessionId");
+			
+			$person2Obj = Person::create(array("accountName"=>"testPerson2","name"=>"Test Person 2"));
+			$testPerson2LoginDetails = LoginDetails::create(array("personId"=>$person2Obj->getAttribute("id"),"loginName"=>"testPerson2","password"=>"abc"));
+				
+			$loginHistory = LoginHistory::find(array("logindetailsId"=>$testPerson2LoginDetails->getAttribute("id"),"type"=>LoginHistory::LH_REGISTRATION));
+			$testPerson2CreateToken = $loginHistory[0]->getAttribute("sessionId");
+				
+		},array(),true);
+		
+		
+		// verify with out session
+		$isException = false;
+		try{
+			LoginDetails::verify('testPerson1', $testPerson1CreateToken);
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// verify with system admin session
+		$this->setSystemAdminSession();
+		$isException = false;
+		try{
+			LoginDetails::verify('testPerson1', $testPerson1CreateToken);
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		$testPerson1LoginDetails = new LoginDetails("testPerson1");
+		parent::assertEquals(LoginDetails::STATUS_ACTIVE,$testPerson1LoginDetails->getAttribute('status'));
+		
+		
+		// verify test person 2 with test person 1 session
+		Person::login('testPerson1', '123');
+		
+		$isException = false;
+		try{
+			LoginDetails::verify('testPerson2', $testPerson2CreateToken);
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// reverify test person 1 
+		$isException = false;
+		try{
+			LoginDetails::verify('testPerson1', $testPerson1CreateToken);
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		//login with test person 2
+		Person::login('testPerson2', 'abc');
+		
+		// verify with wrong token
+		$isException = false;
+		try{
+			LoginDetails::verify('testPerson2', $testPerson1CreateToken);
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// verify with right token
+		$isException = false;
+		try{
+			LoginDetails::verify('testPerson2', $testPerson2CreateToken);
+		}catch (\Exception $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		$testPerson2LoginDetails = new LoginDetails("testPerson2");
+		parent::assertEquals(LoginDetails::STATUS_ACTIVE,$testPerson1LoginDetails->getAttribute('status'));
+		
+	}
+	
+	
+	function testActivate(){
+		/**
+		 * data
+		 */
+		$testPerson1LoginDetails = null;
+		$testPerson2LoginDetails = null;
+		
+		TransactionManager::executeInTransaction(function () use (&$testPerson1LoginDetails,&$testPerson2LoginDetails){
+			$person1Obj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
+			$testPerson1LoginDetails = LoginDetails::create(array("personId"=>$person1Obj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
+			
+			$person2Obj = Person::create(array("accountName"=>"testPerson2","name"=>"Test Person 2"));
+			$testPerson2LoginDetails = LoginDetails::create(array("personId"=>$person2Obj->getAttribute("id"),"loginName"=>"testPerson2","password"=>"abc"));
+			
+		},array(),true);
+	
+		// manually change the status to DISABLED
+		$this->manuallyChangeStatus($testPerson1LoginDetails, LoginDetails::STATUS_DISABLED);
+		
+		// activate with out session
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->activate();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// manually change the status to PENDING VERIFICATION
+		$this->manuallyChangeStatus($testPerson1LoginDetails,LoginDetails::STATUS_DISABLED);
+
+		// activate with system admin session
+		$this->setSystemAdminSession();
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->activate();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		$testPerson1LoginDetails = new LoginDetails("testPerson1");
+		parent::assertEquals(LoginDetails::STATUS_ACTIVE,$testPerson1LoginDetails->getAttribute('status'));
+
+
+		// activate test person 2 with test person 1 session
+		Person::login('testPerson1', '123');
+
+		// manually change the status to DISABLED
+		$this->manuallyChangeStatus($testPerson2LoginDetails,LoginDetails::STATUS_DISABLED);
+		
+		$isException = false;
+		try{
+			$testPerson2LoginDetails->activate();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+
+		// re-activate test person 1
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->activate();
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+	
+		// manually change the status to STATUS_PENDING_VERIFICATION
+		$this->manuallyChangeStatus($testPerson2LoginDetails,LoginDetails::STATUS_PENDING_VERIFICATION);
+		
+		//login with test person 2
+		Person::login('testPerson2', 'abc');
+		
+		// activate logindetails in PENDING VERIFICATION status 
+		$isException = false;
+		try{
+			$testPerson2LoginDetails->activate();
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// manually disable the login details
+		$this->manuallyChangeStatus($testPerson2LoginDetails,LoginDetails::STATUS_DISABLED);
+		
+		// activate logindetails in DISABLED status 
+		$isException = false;
+		try{
+			$testPerson2LoginDetails->activate();
+		}catch (\Exception $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		$testPerson2LoginDetails = new LoginDetails("testPerson2");
+		parent::assertEquals(LoginDetails::STATUS_ACTIVE,$testPerson1LoginDetails->getAttribute('status'));
+		
+	}
+	
+	function testDisable(){
+		/**
+		 * data
+		 */
+		$testPerson1LoginDetails = null;
+		$testPerson2LoginDetails = null;
+	
+		TransactionManager::executeInTransaction(function () use (&$testPerson1LoginDetails,&$testPerson2LoginDetails){
+			$person1Obj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
+			$testPerson1LoginDetails = LoginDetails::create(array("personId"=>$person1Obj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
+				
+			$person2Obj = Person::create(array("accountName"=>"testPerson2","name"=>"Test Person 2"));
+			$testPerson2LoginDetails = LoginDetails::create(array("personId"=>$person2Obj->getAttribute("id"),"loginName"=>"testPerson2","password"=>"abc"));
+				
+		},array(),true);
+	
+		// manually change the status to ACTIVE
+		$this->manuallyChangeStatus($testPerson1LoginDetails,LoginDetails::STATUS_ACTIVE);
+
+		// disable with out session
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->disable();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+
+		// manually change the status to PENDING VERIFICATION
+		$this->manuallyChangeStatus($testPerson1LoginDetails,LoginDetails::STATUS_PENDING_VERIFICATION);
+
+		// activate with system admin session
+		$this->setSystemAdminSession();
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->disable();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		parent::assertEquals(LoginDetails::STATUS_DISABLED,$testPerson1LoginDetails->getAttribute('status'));
+
+
+		// disable test person 2 with test person 1 session
+		$this->manuallyChangeStatus($testPerson1LoginDetails,LoginDetails::STATUS_ACTIVE);
+		Person::login('testPerson1', '123');
+
+		// manually change the status to ACTIVE
+		$this->manuallyChangeStatus($testPerson2LoginDetails,LoginDetails::STATUS_ACTIVE);
+
+		$isException = false;
+		try{
+			$testPerson2LoginDetails->disable();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+
+		// manually change the status to DISABLE
+		$this->manuallyChangeStatus($testPerson1LoginDetails,LoginDetails::STATUS_DISABLED);
+		
+		// re-disable test person 1
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->disable();
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+
+		// manually change the status to STATUS_PENDING_VERIFICATION
+		$this->manuallyChangeStatus($testPerson2LoginDetails,LoginDetails::STATUS_PENDING_VERIFICATION);
+
+		//login with test person 2
+		Person::login('testPerson2', 'abc');
+
+		// disable logindetails in PENDING VERIFICATION status
+		$isException = false;
+		try{
+			$testPerson2LoginDetails->disable();
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+
+		// manually activate the login details
+		$this->manuallyChangeStatus($testPerson2LoginDetails,LoginDetails::STATUS_ACTIVE);
+
+		// disable logindetails in ACTIVE status
+		$isException = false;
+		try{
+			$testPerson2LoginDetails->disable();
+		}catch (\Exception $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		parent::assertEquals(LoginDetails::STATUS_DISABLED,$testPerson1LoginDetails->getAttribute('status'));
+
+	}
+	
+	private function manuallyChangeStatus(&$loginDetails,$status){
+		TransactionManager::executeInTransaction(function () use (&$loginDetails,&$status){
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>$status)));
+		},array(),true);
+	}
+	
+	
 }

@@ -11,6 +11,7 @@ use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Config\Settings;
 use PhpPlatform\Persist\MySql;
 use PhpPlatform\Collaboration\Session;
+use PhpPlatform\Collaboration\Util\PersonSession;
 use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 
 /**
@@ -94,11 +95,10 @@ class LoginDetails extends Model {
     		
     		$createToken = $loginDetails->personId.md5($loginDetails->personId.rand(1,1000).MySql::getMysqlDate(null,true).$loginDetails->id);
     		
-    		$storedCreateToken = $loginDetails->id.md5($createToken);
     		LoginHistory::create(array(
     				"logindetailsId"=>$loginDetails->id,
     				"type"=>LoginHistory::LH_REGISTRATION,
-    				"sessionId"=>$storedCreateToken
+    				"sessionId"=>$createToken
     		));
     		
     		TransactionManager::commitTransaction();
@@ -145,7 +145,7 @@ class LoginDetails extends Model {
     static function verify($loginName,$createToken){
         $loginDetails = self::find(array("loginName"=>$loginName,"status"=>array(self::OPERATOR_IN=>array(self::STATUS_ACTIVE,self::STATUS_PENDING_VERIFICATION))));
         if(count($loginDetails) != 1){
-        	throw new NoAccessException("Invalid loginName or createToken");
+        	throw new \PhpPlatform\Errors\Exceptions\Persistence\NoAccessException("User don't have access to verify $loginName");
         }
         $loginDetail = $loginDetails[0];
         if($loginDetail->status == self::STATUS_ACTIVE){
@@ -153,14 +153,14 @@ class LoginDetails extends Model {
         }
         
         try{
-        	// self::find , checks for read access on logindetails, so loginhistory is accessed through superUser's transaction
+        	// self::find will check for read access on logindetails,
+        	//so loginhistory is accessed through superUser's transaction
         	TransactionManager::startTransaction(null,true);
         	
-        	$storedCreateToken = $loginDetails->id.md5($createToken);
-        	$loginHistory = LoginHistory::find(array("logindetailsId"=>$loginDetail->id,"sessionId"=>$storedCreateToken,"type"=>LoginHistory::LH_REGISTRATION));
+        	$loginHistory = LoginHistory::find(array("logindetailsId"=>$loginDetail->id,"sessionId"=>$createToken,"type"=>LoginHistory::LH_REGISTRATION));
         	
         	if(count($loginHistory) == 0){
-        		throw new NoAccessException("Invalid loginName or createToken");
+        		throw new BadInputException("Invalid loginName or createToken");
         	}
         	
         	// verified , so activate 
@@ -181,8 +181,12 @@ class LoginDetails extends Model {
     	try{
     		TransactionManager::startTransaction();
     		
-    		if(!TransactionManager::isSuperUser() && $this->status == self::STATUS_PENDING_VERIFICATION){
+    		if(!TransactionManager::isSuperUser() && !PersonSession::hasPerson('systemAdmin') && $this->status == self::STATUS_PENDING_VERIFICATION){
     			throw new NoAccessException("Verification Pending");
+    		}
+    		
+    		if($this->status == self::STATUS_ACTIVE){
+    			throw new BadInputException("Already Active");
     		}
 
     		parent::setAttributes(array("status"=>self::STATUS_ACTIVE));
@@ -215,10 +219,14 @@ class LoginDetails extends Model {
     	try{
     		TransactionManager::startTransaction();
     	
-    		if(!TransactionManager::isSuperUser() && $this->status == self::STATUS_PENDING_VERIFICATION){
-    			throw new NoAccessException("Verification Pending");
+    		if(!TransactionManager::isSuperUser() && !PersonSession::hasPerson('systemAdmin') && $this->status == self::STATUS_PENDING_VERIFICATION){
+    		    throw new NoAccessException("Verification Pending");
     		}
     	
+    		if($this->status == self::STATUS_DISABLED){
+    			throw new BadInputException("Already Disabled");
+    		}
+    		
     		parent::setAttributes(array("status"=>self::STATUS_DISABLED));
     		// add login history in superUser's Transaction
     		try{
