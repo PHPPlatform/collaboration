@@ -13,6 +13,7 @@ use PhpPlatform\Persist\MySql;
 use PhpPlatform\Collaboration\Session;
 use PhpPlatform\Collaboration\Util\PersonSession;
 use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
+use PhpPlatform\Errors\Exceptions\Persistence\DataNotFoundException;
 
 /**
  * @tableName login_details
@@ -350,7 +351,17 @@ class LoginDetails extends Model {
     
     
     static function authenticate($loginName,$password){
-    	$loginDetails = new LoginDetails($loginName);
+    	$loginDetails = null;
+    	TransactionManager::executeInTransaction(function() use (&$loginDetails,$loginName){
+    		try{
+    			$loginDetails = new LoginDetails($loginName);
+    		}catch (DataNotFoundException $e){
+    			// dont do anything
+    		}
+    	},array(),true);
+    	if($loginDetails == null){
+    		return false;
+    	}
     	return $loginDetails->hashPassword($password) == $loginDetails->password;
     }
     

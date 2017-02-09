@@ -20,9 +20,9 @@ after_failure:
 before_script:
   - composer update
   - mkdir sessions
-#  - cp ClassLoader.php vendor/composer/ClassLoader.php
-#  - cp ModelTest.php vendor/php-platform/persist-unit/src/Tests/PersistUnit/ModelTest.php
-#  - cp ErrorHandler.php vendor/php-platform/errors/src/Errors/ErrorHandler.php
 
 script:
-  - ./vendor/bin/phpunit -c phpunit.xml 
+  - ./vendor/bin/phpunit -c phpunit.xml --coverage-clover=coverage.xml
+
+after_success:
+    - bash <(curl -s https://codecov.io/bash)

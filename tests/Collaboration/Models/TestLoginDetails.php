@@ -15,6 +15,7 @@ use PhpPlatform\Config\Settings;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Persist\Reflection;
 use PhpPlatform\Persist\Exception\ObjectStateException;
+use PhpPlatform\Mock\Config\MockSettings;
 
 class TestLoginDetails extends TestBase {
 	
@@ -865,8 +866,152 @@ class TestLoginDetails extends TestBase {
 		// login from test person 2
 		Person::login('newLoginName2', 'abc');
 		
+	}
+	
+	function testLogin(){
+		/**
+		 * data
+		 */
+		$testPerson1LoginDetails = null;
+		
+		TransactionManager::executeInTransaction(function () use (&$testPerson1LoginDetails){
+			$person1Obj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
+			$testPerson1LoginDetails = LoginDetails::create(array("personId"=>$person1Obj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
+		},array(),true);
+		
+		// login with wrong password
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->login('123456');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// login with right password and no history
+		MockSettings::setSettings('php-platform/collaboration', "saveLoginHistory", false);
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->login('123');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		
+		// validate login history
+		$loginHistory = null;
+		TransactionManager::executeInTransaction(function () use (&$loginHistory,$testPerson1LoginDetails){
+			$loginHistory = LoginHistory::find(array("logindetailsId"=>$testPerson1LoginDetails->getAttribute('id'),"type"=>LoginHistory::LH_LOGIN));
+		},array(),true);
+		parent::assertCount(0, $loginHistory);
+		
+		// login with right password and with history
+		MockSettings::setSettings('php-platform/collaboration', "saveLoginHistory", true);
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->login('123');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		
+		// validate login history
+		$loginHistory = null;
+		TransactionManager::executeInTransaction(function () use (&$loginHistory,$testPerson1LoginDetails){
+			$loginHistory = LoginHistory::find(array("logindetailsId"=>$testPerson1LoginDetails->getAttribute('id'),"type"=>LoginHistory::LH_LOGIN));
+		},array(),true);
+		parent::assertCount(1, $loginHistory);
 		
 	}
 	
+	function testLogout(){
+		/**
+		 * data
+		 */
+		$testPerson1LoginDetails = null;
+	
+		TransactionManager::executeInTransaction(function () use (&$testPerson1LoginDetails){
+			$person1Obj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
+			$testPerson1LoginDetails = LoginDetails::create(array("personId"=>$person1Obj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
+		},array(),true);
+	
+		
+		// logout with right password and no history
+		MockSettings::setSettings('php-platform/collaboration', "saveLoginHistory", false);
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->logout();
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+
+		// validate login history
+		$loginHistory = null;
+		TransactionManager::executeInTransaction(function () use (&$loginHistory,$testPerson1LoginDetails){
+			$loginHistory = LoginHistory::find(array("logindetailsId"=>$testPerson1LoginDetails->getAttribute('id'),"type"=>LoginHistory::LH_LOGOUT));
+		},array(),true);
+			parent::assertCount(0, $loginHistory);
+
+		// login with right password and with history
+		MockSettings::setSettings('php-platform/collaboration', "saveLoginHistory", true);
+		$isException = false;
+		try{
+			$testPerson1LoginDetails->logout();
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+
+		// validate login history
+		$loginHistory = null;
+		TransactionManager::executeInTransaction(function () use (&$loginHistory,$testPerson1LoginDetails){
+			$loginHistory = LoginHistory::find(array("logindetailsId"=>$testPerson1LoginDetails->getAttribute('id'),"type"=>LoginHistory::LH_LOGOUT));
+		},array(),true);
+		parent::assertCount(1, $loginHistory);
+	
+	}
+	
+	function testAuthenticate(){
+		/**
+		 * data
+		 */
+		$loginDetails = null;
+		TransactionManager::executeInTransaction(function () use (&$loginDetails){
+			$person1Obj = Person::create(array("accountName"=>"testPerson1","name"=>"Test Person 1"));
+			$loginDetails = LoginDetails::create(array("personId"=>$person1Obj->getAttribute("id"),"loginName"=>"testPerson1","password"=>"123"));
+		},array(),true);
+	
+		// authenticate with wrong password
+		$result = LoginDetails::authenticate('testPerson1', '1234');
+		parent::assertTrue(!$result);
+		
+		// authenticate with wrong loginName
+		$result = LoginDetails::authenticate('testPerson12', '123');
+		parent::assertTrue(!$result);
+		
+		// authenticate with wrong loginName and wrong password
+		$result = LoginDetails::authenticate('testPerson12', '1234');
+		parent::assertTrue(!$result);
+		
+		// authenticate with right loginName and right password
+	
+		//     with status ACTIVE
+		self::manuallyChangeStatus($loginDetails, LoginDetails::STATUS_ACTIVE);
+		$result = LoginDetails::authenticate('testPerson1', '123');
+		parent::assertTrue($result);
+		
+		//     with status DISABLED
+		self::manuallyChangeStatus($loginDetails, LoginDetails::STATUS_DISABLED);
+		$result = LoginDetails::authenticate('testPerson1', '123');
+		parent::assertTrue(!$result);
+		
+		//     with status PENDING VERIFICATION
+		self::manuallyChangeStatus($loginDetails, LoginDetails::STATUS_PENDING_VERIFICATION);
+		$result = LoginDetails::authenticate('testPerson1', '123');
+		parent::assertTrue(!$result);
+		
+	
+	}
 	
 }
