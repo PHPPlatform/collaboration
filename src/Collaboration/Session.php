@@ -9,10 +9,6 @@ use PhpPlatform\Errors\Exceptions\Application\ProgrammingError;
 
 class Session extends Cache{
 	
-	const SESSION_ACCOUNTS = 'SESSION_ACCOUNTS';
-	const SESSION_PERSON = 'SESSION_PERSON';
-	
-	
 	/**
 	 * @var Session
 	 */

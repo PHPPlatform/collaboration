@@ -10,7 +10,6 @@ use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Config\Settings;
 use PhpPlatform\Persist\MySql;
-use PhpPlatform\Collaboration\Session;
 use PhpPlatform\Collaboration\Util\PersonSession;
 use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 use PhpPlatform\Errors\Exceptions\Persistence\DataNotFoundException;
@@ -537,7 +536,7 @@ class LoginDetails extends Model {
     }
 
     protected static function canRead($filters){
-        $sessionPerson = Session::getInstance()->get(Session::SESSION_PERSON);
+        $sessionPerson = PersonSession::getPerson();
         if($sessionPerson){
             $loginDetailsClass = get_class();
             $sessionPersonId = $sessionPerson['id'];
@@ -551,7 +550,7 @@ class LoginDetails extends Model {
     }
     
     protected function canEdit($args = array()){
-    	$sessionPerson = Session::getInstance()->get(Session::SESSION_PERSON);
+    	$sessionPerson = PersonSession::getPerson();
     	if($sessionPerson){
     		$sessionPersonId = $sessionPerson['id'];
     		return $sessionPersonId == $this->personId;

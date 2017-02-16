@@ -8,6 +8,7 @@ namespace PhpPlatform\Collaboration\Models;
 
 use PhpPlatform\Persist\Exception\ObjectStateException;
 use PhpPlatform\Persist\TransactionManager;
+use PhpPlatform\Collaboration\Util\PersonSession;
 
 /**
  * @tableName role
@@ -122,28 +123,44 @@ class Role extends Account {
     	}
     	return Person::find(array("id"=>array(self::OPERATOR_IN=>$personIds)));
     }
-
-    // connected group manupulations //
     
-    /**
-     * @throws Exception
-     * @return Groups[]
-     */
-    function getGroups(){
-    	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
-    	try{
-    		TransactionManager::startTransaction(null,true);
-    		$groupAccountObjs = GroupsAccounts::find(array("accountId"=>$this->accountId,"accountType"=>GroupsAccounts::TYPE_ROLE));
-    		$groupIds = array();
-    		foreach ($groupAccountObjs as $groupAccountObj){
-    			$groupIds[] = $groupAccountObj->getAttribute("groupId");
+    protected static function canCreate($data = array()){
+    	return PersonSession::hasRole('roleCreator');
+    }
+    
+    protected static function canRead($args = array()){
+    	$readExpr = parent::canRead($args);
+    	if(PersonSession::hasRole('roleReader')){
+    		// can read all the role he belongs to
+    		$belongingOrgs = PersonSession::getRoles();
+    		if(count($belongingOrgs) > 0 ){
+    			$accountClass = get_parent_class();
+    			$accountNameExpr = "{".$accountClass."."."accountName"."}";
+    			$dbs = TransactionManager::getConnection();
+    			$belongingOrgsStr = "'".implode("','", $dbs->escape_string($belongingOrgs))."'";
+    
+    			$readExpr = "($readExpr) OR $accountNameExpr in ($belongingOrgsStr)";
     		}
-    		TransactionManager::commitTransaction();
-    	}catch (\Exception $e){
-    		TransactionManager::abortTransaction();
-    		throw $e;
     	}
-    	return Groups::find(array("id"=>array(self::OPERATOR_IN=>$groupIds)));
+    	return $readExpr;
+    }
+    
+    protected function canEdit($args){
+    	$canEdit = parent::canEdit($args);
+    	if(!$canEdit && PersonSession::hasRole('roleEditor')){
+    		$belongingOrgs = PersonSession::getRoles();
+    		$canEdit = in_array($this->getAttribute('accountName'), $belongingOrgs);
+    	}
+    	return $canEdit;
+    }
+    
+    protected function canDelete(){
+    	$canDelete = parent::canDelete();
+    	if(!$canDelete && PersonSession::hasRole('roleEraser')){
+    		$belongingOrgs = PersonSession::getRoles();
+    		$canDelete = in_array($this->getAttribute('accountName'), $belongingOrgs);
+    	}
+    	return $canDelete;
     }
     
 

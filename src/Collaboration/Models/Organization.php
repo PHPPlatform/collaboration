@@ -9,6 +9,7 @@ use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Persist\Exception\ObjectStateException;
 use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
+use PhpPlatform\Collaboration\Util\PersonSession;
 
 /**
  * @tableName organization
@@ -298,6 +299,46 @@ class Organization extends Account {
             throw $e;
         }
     }
+    
+    protected static function canCreate($data = array()){
+    	return PersonSession::hasRole('orgCreator');
+    }
+    
+    protected static function canRead($args = array()){
+    	$readExpr = parent::canRead($args);
+    	if(PersonSession::hasRole('orgReader')){
+    		// can read all the org he belongs to
+    		$belongingOrgs = PersonSession::getOrganizations();
+    		if(count($belongingOrgs) > 0 ){
+    			$accountClass = get_parent_class();
+    			$accountNameExpr = "{".$accountClass."."."accountName"."}";
+    			$dbs = TransactionManager::getConnection();
+    			$belongingOrgsStr = "'".implode("','", $dbs->escape_string($belongingOrgs))."'";
+    			 
+    			$readExpr = "($readExpr) OR $accountNameExpr in ($belongingOrgsStr)";
+    		}
+    	}
+    	return $readExpr;
+    }
+    
+    protected function canEdit($args){
+    	$canEdit = parent::canEdit($args);
+    	if(!$canEdit && PersonSession::hasRole('orgEditor')){
+    		$belongingOrgs = PersonSession::getOrganizations();
+    		$canEdit = in_array($this->getAttribute('accountName'), $belongingOrgs);
+    	}
+    	return $canEdit;
+    }
+    
+    protected function canDelete(){
+    	$canDelete = parent::canDelete();
+    	if(!$canDelete && PersonSession::hasRole('orgEraser')){
+    		$belongingOrgs = PersonSession::getOrganizations();
+    		$canDelete = in_array($this->getAttribute('accountName'), $belongingOrgs);
+    	}
+    	return $canDelete;
+    }
+    
 
 
 }

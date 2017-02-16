@@ -27,7 +27,18 @@ class OrganizationPerson extends Model {
      * @get
      */
     private $personId = null;
-
+    
+    /**
+     * @columnName TYPE
+     * @type enum
+     * @set
+     * @get
+     */
+    private $type = null;
+    
+    const TYPE_OWNER = 'OWNER';
+    const TYPE_ADMINISTRATOR = 'ADMINISTRATOR';
+    const TYPE_MEMBER = 'MEMBER';
 
     function __construct($organizationId = null,$personId = null){
         $this->organizationId = $organizationId;

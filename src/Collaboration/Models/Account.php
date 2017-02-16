@@ -6,9 +6,9 @@
 namespace PhpPlatform\Collaboration\Models;
 
 use PhpPlatform\Collaboration\Model;
-use PhpPlatform\Collaboration\Session;
 use PhpPlatform\Persist\MySql;
 use PhpPlatform\Persist\TransactionManager;
+use PhpPlatform\Collaboration\Util\PersonSession;
 
 /**
  * @tableName account
@@ -78,7 +78,7 @@ abstract class Account extends Model {
     static function create($data){
         // get the created by Id from session if present
         $sessionPersonId = null;
-        $sessionPerson = Session::getInstance()->get(Session::SESSION_PERSON);
+        $sessionPerson = PersonSession::getPerson();
         if(isset($sessionPerson) && isset($sessionPerson["id"])){
         	$sessionPersonId = $sessionPerson["id"];
         }
@@ -258,7 +258,7 @@ abstract class Account extends Model {
 
     protected static function canRead($args){
     	
-        $sessionPerson = Session::getInstance()->get(Session::SESSION_PERSON);
+       $sessionPerson = PersonSession::getPerson();
         if($sessionPerson){
             $accountClass = get_class();
             $sessionPersonAccountId = $sessionPerson['accountId'];
@@ -274,8 +274,8 @@ abstract class Account extends Model {
 
     protected function canEdit($args){
 
-    	$sessionPerson = Session::getInstance()->get(Session::SESSION_PERSON);
-        if($sessionPerson){
+    	$sessionPerson = PersonSession::getPerson();
+        if(isset($sessionPerson)){
             $sessionPersonAccountId = $sessionPerson['accountId'];
             return ($this->id == $sessionPersonAccountId) || ($this->createdById == $sessionPersonAccountId);
         }

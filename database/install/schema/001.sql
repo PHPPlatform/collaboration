@@ -1,14 +1,14 @@
 
 -- Drop Tables 
 
-DROP TABLE IF EXISTS groups_accounts;
-DROP TABLE IF EXISTS groups;
+
 DROP TABLE IF EXISTS organization_person;
 DROP TABLE IF EXISTS organization;
 DROP TABLE IF EXISTS login_history;
 DROP TABLE IF EXISTS login_details;
 DROP TABLE IF EXISTS person_role;
 DROP TABLE IF EXISTS person;
+DROP TABLE IF EXISTS composed_roles;
 DROP TABLE IF EXISTS role;
 DROP TABLE IF EXISTS account;
 DROP TABLE IF EXISTS contact;
@@ -32,6 +32,11 @@ CREATE TABLE account
 );
 
 
+CREATE TABLE composed_roles
+(
+	ROLE_ID bigint(10) unsigned NOT NULL,
+	COMPOSED_ROLE_ID bigint(10) unsigned NOT NULL
+);
 CREATE TABLE contact
 (
     ID bigint(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -41,23 +46,6 @@ Application modules can decide on the schema of this json object',
 );
 
 
-CREATE TABLE groups
-(
-    ID bigint(10) unsigned NOT NULL AUTO_INCREMENT,
-    ACCOUNT_ID bigint(10) unsigned NOT NULL,
-    NAME varchar(20),
-    PRIMARY KEY (ID),
-    UNIQUE (ACCOUNT_ID)
-);
-
-
-CREATE TABLE groups_accounts
-(
-    GROUP_ID bigint(10) unsigned NOT NULL,
-    ACCOUNT_ID bigint(10) unsigned NOT NULL,
-    ACCOUNT_TYPE enum('ORGANIZATION','PERSON','GROUPS','ROLE') NOT NULL,
-    UNIQUE (GROUP_ID, ACCOUNT_ID)
-);
 
 
 CREATE TABLE login_details
@@ -101,6 +89,7 @@ CREATE TABLE organization_person
 (
     ORGANIZATION_ID bigint(10) unsigned NOT NULL,
     PERSON_ID bigint(10) unsigned NOT NULL,
+	TYPE enum('OWNER','ADMINISTRATOR','MEMBER') DEFAULT 'MEMBER' NOT NULL,
     UNIQUE (ORGANIZATION_ID, PERSON_ID)
 );
 
@@ -153,27 +142,6 @@ ALTER TABLE account
     REFERENCES person (ID)
     ON UPDATE CASCADE
     ON DELETE SET NULL
-;
-
-ALTER TABLE groups
-    ADD FOREIGN KEY (ACCOUNT_ID)
-    REFERENCES account (ID)
-    ON UPDATE CASCADE
-    ON DELETE RESTRICT
-;
-
-ALTER TABLE groups_accounts
-    ADD FOREIGN KEY (ACCOUNT_ID)
-    REFERENCES account (ID)
-    ON UPDATE CASCADE
-    ON DELETE CASCADE
-;
-
-ALTER TABLE groups_accounts
-    ADD FOREIGN KEY (GROUP_ID)
-    REFERENCES groups (ID)
-    ON UPDATE CASCADE
-    ON DELETE RESTRICT
 ;
 
 ALTER TABLE organization
@@ -244,6 +212,20 @@ ALTER TABLE person_role
     ON DELETE CASCADE
 ;
 
+ALTER TABLE composed_roles
+	ADD FOREIGN KEY (ROLE_ID)
+	REFERENCES ROLE (ID)
+	ON UPDATE RESTRICT
+	ON DELETE RESTRICT
+;
+
+
+ALTER TABLE composed_roles
+	ADD FOREIGN KEY (COMPOSED_ROLE_ID)
+	REFERENCES ROLE (ID)
+	ON UPDATE CASCADE
+	ON DELETE CASCADE
+;
 ALTER TABLE person_role
     ADD FOREIGN KEY (ROLE_ID)
     REFERENCES role (ID)

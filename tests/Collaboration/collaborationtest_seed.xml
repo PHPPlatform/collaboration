@@ -13,10 +13,6 @@
     </table_data>
     <table_data name="contact">
     </table_data>
-    <table_data name="groups">
-    </table_data>
-    <table_data name="groups_accounts">
-    </table_data>
     <table_data name="login_details">
     </table_data>
     <table_data name="login_history">
@@ -30,6 +26,8 @@
     <table_data name="person_role">
     </table_data>
     <table_data name="role">
+    </table_data>
+    <table_data name="composed_roles">
     </table_data>
     
     <!-- Sample table for testing -->

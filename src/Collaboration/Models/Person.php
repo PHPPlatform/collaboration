@@ -166,7 +166,7 @@ class Person extends Account {
      * @throws Exception
      * @return Role[]
      */
-    function getRoles(){
+    function getRoles($includeComposed = false){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
     	try{
     		TransactionManager::startTransaction(null,true);
@@ -174,6 +174,9 @@ class Person extends Account {
     		$roleIds = array();
     		foreach ($personRoleObjs as $personRoleObj){
     			$roleIds[] = $personRoleObj->getAttribute("roleId");
+    		}
+    		if($includeComposed){
+    			ComposedRoles::generateComposedRoleIds($roleIds);
     		}
     		TransactionManager::commitTransaction();
     	}catch (\Exception $e){
@@ -276,7 +279,7 @@ class Person extends Account {
     		}
     		$registrationToken = $loginHistory[0]->getAttribute("sessionId");
     		
-    		if(Session::getInstance()->get(Session::SESSION_PERSON) == null){
+    		if(PersonSession::getPerson() == null){
     			$registeredPerson->login($loginName, $password);
     		}
     		
@@ -309,12 +312,7 @@ class Person extends Account {
     		$personId = $loginDetails->getAttribute("personId");
     		
     		$loggedInPerson = new Person($personId);
-    		
-    		Session::getInstance()->refresh();
-    		
-    		// save account info in session
-    		Session::getInstance()->set(Session::SESSION_PERSON,$loggedInPerson->getAttributes("*"));
-    
+
     		// save loggedIn Person's related accounts in session
             PersonSession::update($loggedInPerson, $loginDetails);
     		
@@ -331,7 +329,7 @@ class Person extends Account {
     static function logout(){
     	try{
     		TransactionManager::startTransaction(null,true);
-    		$loggedInPerson = Session::getInstance()->get(Session::SESSION_PERSON);
+    		$loggedInPerson = PersonSession::getPerson();
     		if($loggedInPerson != null){
     			$loginDetails = new LoginDetails($loggedInPerson["id"]);
     			$loginDetails->logout();
@@ -390,6 +388,38 @@ class Person extends Account {
     	}
     	return $loginHistory;
     }
+    
+    
+    protected static function canCreate($data = array()){
+    	return PersonSession::hasRole('personCreator');
+    }
+    
+    protected static function canRead($args = array()){
+    	$readExpr = parent::canRead($args);
+    	if(PersonSession::hasRole('personReader')){
+    		
+    	}
+    	return $readExpr;
+    }
+    
+    protected function canEdit($args){
+    	$canEdit = parent::canEdit($args);
+    	if(!$canEdit && PersonSession::hasRole('personEditor')){
+    		$belongingOrgs = PersonSession::getPersons();
+    		$canEdit = in_array($this->getAttribute('accountName'), $belongingOrgs);
+    	}
+    	return $canEdit;
+    }
+    
+    protected function canDelete(){
+    	$canDelete = parent::canDelete();
+    	if(!$canDelete && PersonSession::hasRole('personEraser')){
+    		$belongingOrgs = PersonSession::getPersons();
+    		$canDelete = in_array($this->getAttribute('accountName'), $belongingOrgs);
+    	}
+    	return $canDelete;
+    }
+    
 
 }
 

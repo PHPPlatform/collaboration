@@ -12,6 +12,7 @@ use PhpPlatform\Annotations\Annotation;
 use PhpPlatform\Persist\Model as PersistModel;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Persist\Reflection;
+use PhpPlatform\Collaboration\Util\PersonSession;
 
 abstract class Model extends PersistModel{
 
@@ -59,18 +60,24 @@ abstract class Model extends PersistModel{
             if(array_key_exists("access", $annotations)){
             	$accessAnnotations = $annotations["access"];
             }
-            
-            while($accessAnnotations == "inherit" && $className != false){
-            	$className = get_parent_class($className);
-            	if($className == false){
+            if(is_string($accessAnnotations)){
+            	$accessAnnotations = array($accessAnnotations);
+            }
+            $parentClass = $className;
+            while(in_array("inherit", $accessAnnotations) && $parentClass != false){
+            	$parentClass = get_parent_class($parentClass);
+            	if($parentClass == false){
             		break;
             	}
-            	$annotations = Annotation::getAnnotations($className,null,null,$function);
+            	$annotations = Annotation::getAnnotations($parentClass,null,null,$function);
             	if(array_key_exists($function, $annotations["methods"])
             			&& array_key_exists("access", $annotations["methods"][$function])){
-            		$accessAnnotations = $annotations["methods"][$function]["access"];
-            	}else{
-            		$accessAnnotations = false;
+            		$_accessAnnotations = $annotations["methods"][$function]["access"];
+            		if(is_string($_accessAnnotations)){
+            			$_accessAnnotations = array($_accessAnnotations);
+            		}
+            		unset($accessAnnotations["inherit"]);
+            		$accessAnnotations = array_merge($accessAnnotations,$_accessAnnotations);
             	}
             }
             
@@ -93,12 +100,12 @@ abstract class Model extends PersistModel{
                 }
                 //$accessMasks = array("group"=>array("G1_NAME","G2_NAME"),"orgnaization"=>array("O1_NAME") .....)
                 
-                $sessionAccounts = Session::getInstance()->get(Session::SESSION_ACCOUNTS);
+                $sessionAccounts = PersonSession::getAccounts();
                 if(!is_array($sessionAccounts)){
                 	$sessionAccounts = array();
                 }
                 
-                foreach (array("organization","role","person") as $accountType){
+                foreach (array("organization", "role", "person", "group") as $accountType){
                 	if(array_key_exists($accountType, $accessMasks) && array_key_exists($accountType, $sessionAccounts)){
                 		if(count(array_diff($accessMasks[$accountType], $sessionAccounts[$accountType])) < count($accessMask[$accountType])){
                 			$hasAccess = true;
