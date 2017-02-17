@@ -8,6 +8,8 @@ use PhpPlatform\Errors\Exceptions\Persistence\DataNotFoundException;
 use PhpPlatform\Errors\Exceptions\Persistence\NoAccessException;
 use PhpPlatform\Tests\Collaboration\SampleModels\FreeSampleAccount;
 use PhpPlatform\Persist\TransactionManager;
+use PhpPlatform\Collaboration\Models\Contact;
+use PhpPlatform\Errors\Exceptions\Persistence\BadQueryException;
 
 class TestAccount extends TestBase {
 	
@@ -68,6 +70,18 @@ class TestAccount extends TestBase {
 		parent::assertEquals("sampleAccount1", $sampleAccount1->getAttribute("accountName"));
 		parent::assertEquals("Sample Account1", $sampleAccount1->getAttribute("name"));
 		
+		// create with contact information
+		$isException = false;
+		try{
+			$sampleAccount2 = SampleAccount::create(array("accountName"=>"sampleAccount2","name"=>"Sample Account2","contact"=>array("email"=>"sample2@example.com","phone"=>"1234567890")));
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		parent::assertEquals("sampleAccount2", $sampleAccount2->getAttribute("accountName"));
+		parent::assertEquals("Sample Account2", $sampleAccount2->getAttribute("name"));
+		parent::assertEquals(array("email"=>"sample2@example.com","phone"=>"1234567890"), $sampleAccount2->getAttribute("contact"));
+		
 	}
 	
 	function testFind(){
@@ -107,11 +121,13 @@ class TestAccount extends TestBase {
 	
 	function testUpdate(){
 		$sampleAccount = null;
+		$sampleAccountWithContact = null;
 		$freeSampleAccount = null;
 		$thisObj = $this;
-		TransactionManager::executeInTransaction(function() use(&$sampleAccount,&$freeSampleAccount,$thisObj){
+		TransactionManager::executeInTransaction(function() use(&$sampleAccount,&$freeSampleAccount,&$sampleAccountWithContact,$thisObj){
 			$sampleAccount = new SampleAccount(1);
 			$freeSampleAccount = new FreeSampleAccount($thisObj->getDatasetValue("account", "0","ACCOUNT_NAME"));
+			$sampleAccountWithContact = SampleAccount::create(array("accountName"=>"sampleAccount2","name"=>"Sample Account2","contact"=>array("email"=>"sample2@example.com","phone"=>"1234567890")));
 		},array(),true);
 		
 		// update without session
@@ -148,14 +164,58 @@ class TestAccount extends TestBase {
 		parent::assertTrue(!$isException);
 		parent::assertEquals("New SampleAccount Name",$sampleAccount->getAttribute("name"));
 		parent::assertEquals("New SampleAccount Account Name",$sampleAccount->getAttribute("accountName"));
+		
+		// update contact for account having no prior contact
+		$isException = false;
+		try{
+			$sampleAccount->setAttribute("contact",array("email"=>"sample@abcd.com"));
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		parent::assertEquals(array("email"=>"sample@abcd.com"),$sampleAccount->getAttribute("contact"));
+		
+		// update contact for account having prior contact
+		$isException = false;
+		try{
+			$sampleAccountWithContact->setAttribute("contact",array("email"=>"sample@abcd.com"));
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		parent::assertEquals(array("email"=>"sample@abcd.com"),$sampleAccountWithContact->getAttribute("contact"));
+		
 	}
+	
+	function testGetAttributes(){
+		// data
+		$sampleAccount = null;
+		TransactionManager::executeInTransaction(function() use(&$sampleAccount){
+			$sampleAccount = SampleAccount::create(array("accountName"=>"sampleAccount1","name"=>"Sample Account1","contact"=>array("email"=>"sample1@example.com","phone"=>"1234567890")));
+		},array(),true);
+		
+		parent::assertEquals("sampleAccount1", $sampleAccount->getAttribute("accountName"));
+		parent::assertEquals("Sample Account1", $sampleAccount->getAttribute("name"));
+		parent::assertEquals(array("email"=>"sample1@example.com","phone"=>"1234567890"), $sampleAccount->getAttribute("contact"));
+		parent::assertEquals(null, $sampleAccount->getAttribute('contactId'));
+		
+		parent::assertArraySubset(array(
+				"accountName"=>"sampleAccount1",
+				"name"=>"Sample Account1",
+				"contact"=>array("email"=>"sample1@example.com","phone"=>"1234567890")
+		), $sampleAccount->getAttributes("*"));
+		
+	}
+	
 	
 	function testDelete(){
 		$sampleAccount = null;
+		$sampleAccountWithContact = null;
 		$freeSampleAccount = null;
-		TransactionManager::executeInTransaction(function() use(&$sampleAccount,&$freeSampleAccount){
+		TransactionManager::executeInTransaction(function() use(&$sampleAccount,&$freeSampleAccount,&$sampleAccountWithContact){
 			$sampleAccount = SampleAccount::create(array("name"=>"Sample Account 1","accountName"=>"sampleAccountName1"));
 			$freeSampleAccount = FreeSampleAccount::create(array("accountName"=>"freeSampleAccountName1"));
+			$sampleAccountWithContact = SampleAccount::create(array("accountName"=>"sampleAccount2","name"=>"Sample Account2","contact"=>array("email"=>"sample2@example.com","phone"=>"1234567890")));
 		},array(),true);
 	
 			// delete without session
@@ -184,7 +244,7 @@ class TestAccount extends TestBase {
 			},array(),true);
 	
 	
-			// update with systemAdmin session
+			// delete with systemAdmin session
 			$this->setSystemAdminSession();
 			$isException = false;
 			try{
@@ -193,10 +253,31 @@ class TestAccount extends TestBase {
 				$isException = true;
 			}
 			parent::assertTrue(!$isException);
-			TransactionManager::executeInTransaction(function() use($thisObj){
+			$sampleAccounts = null;
+			TransactionManager::executeInTransaction(function() use(&$sampleAccounts){
 				$sampleAccounts = SampleAccount::find(array("name"=>"Sample Account 1","accountName"=>"sampleAccountName1"));
-				$thisObj->assertCount(0,$sampleAccounts);
 			},array(),true);
+			parent::assertCount(0,$sampleAccounts);
+			
+			
+			// delete account with contact
+			$isException = false;
+			try{
+				$sampleAccountWithContact->delete();
+			}catch (NoAccessException $e){
+				$isException = true;
+			}/* catch (BadQueryException $bqe){
+				exit();
+			} */
+			parent::assertTrue(!$isException);
+			$sampleAccounts = null;
+			$contacts = null;
+			TransactionManager::executeInTransaction(function() use(&$sampleAccounts,&$contacts){
+				$sampleAccounts = SampleAccount::find(array("name"=>"Sample Account 1","accountName"=>"sampleAccountName1"));
+				$contacts = Contact::find(array());
+			},array(),true);
+			parent::assertCount(0,$sampleAccounts);
+			parent::assertCount(0, $contacts);
 			
 	}
 }

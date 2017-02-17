@@ -3,6 +3,7 @@
 namespace PhpPlatform\Collaboration\Models;
 
 use PhpPlatform\Collaboration\Model;
+use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 
 /**
  * @tableName composed_roles
@@ -34,7 +35,7 @@ class ComposedRoles extends Model {
 	
 	/**
 	 * @param array $data
-	 * @return PersonRole
+	 * @return ComposedRoles
 	 *
 	 * @access ("person|systemAdmin")
 	 */
@@ -48,7 +49,7 @@ class ComposedRoles extends Model {
 	 * @param array $pagination
 	 * @param string $where
 	 *
-	 * @return PersonRole[]
+	 * @return ComposedRoles[]
 	 *
 	 * @access ("person|systemAdmin")
 	 */
@@ -69,7 +70,23 @@ class ComposedRoles extends Model {
 	}
 	
 	static function generateComposedRoleIds(&$roleIds){
-		 
+		if(!is_array($roleIds)){
+			throw new BadInputException("Parameter 1 must be array");
+		}
+		if(count($roleIds) == 0){
+			return;
+		}
+		$newRoleIds = array(); 
+		$composedRoleObjs = ComposedRoles::find(array("roleId"=>array(self::OPERATOR_IN=>$roleIds)));
+		foreach ($composedRoleObjs as $composedRoleObj){
+			$composedRoleId = $composedRoleObj->composedRoleId;
+			if(!in_array($composedRoleId, $roleIds)){
+				$newRoleIds[] = $composedRoleId;
+			}
+		}
+		self::generateComposedRoleIds($newRoleIds);
+		$roleIds = array_merge($roleIds,$newRoleIds);
+		
 	}
 	
 }

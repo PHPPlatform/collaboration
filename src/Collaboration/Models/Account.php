@@ -194,12 +194,13 @@ abstract class Account extends Model {
     function delete(){
     	try{
     		TransactionManager::startTransaction();
-    		
-    		if(isset($this->contactId)){
+    		$contactId = $this->contactId;
+    		$result = parent::delete();
+    		if(isset($contactId)){
     			// delete contact in superUser's transaction 
     			try{
     				TransactionManager::startTransaction(null,true);
-    				$contact = new Contact($this->contactId);
+    				$contact = new Contact($contactId);
     				$contact->delete();
     				TransactionManager::commitTransaction();
     			}catch (\Exception $e){
@@ -207,7 +208,6 @@ abstract class Account extends Model {
     				throw $e;
     			}
     		}
-    		$result = parent::delete();
     		TransactionManager::commitTransaction();
     	}catch (\Exception $e){
     		TransactionManager::abortTransaction();
@@ -225,7 +225,7 @@ abstract class Account extends Model {
     	
     	$attributes = parent::getAttributes($args);
     	
-    	if($args == "*" || array_key_exists("contact", $args)){
+    	if($args == "*" || in_array("contact", $args)){
     		if(isset($this->contactId)){
     			try{
     				TransactionManager::startTransaction(null,true);
@@ -247,7 +247,6 @@ abstract class Account extends Model {
     	}
     	return $attributes;
     }
-    
     
     
     // access functions //
