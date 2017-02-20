@@ -10,6 +10,9 @@ use PhpPlatform\Tests\Collaboration\SampleModels\FreeSampleAccount;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Collaboration\Models\Contact;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
+use PhpPlatform\Collaboration\Models\Person;
+use PhpPlatform\Collaboration\Models\LoginDetails;
+use PhpPlatform\Persist\Reflection;
 
 class TestAccount extends TestBase {
 	
@@ -117,6 +120,31 @@ class TestAccount extends TestBase {
 		parent::assertCount(1,$sampleAccounts);
 		parent::assertEquals($this->getDatasetValue("account", "0","ACCOUNT_NAME"), $sampleAccounts[0]->getAttribute("accountName"));
 		parent::assertEquals($this->getDatasetValue("sample_account", "0","NAME"), $sampleAccounts[0]->getAttribute("name"));
+		
+		// create test person
+		$testPerson = Person::create(array("accountName"=>"testPerson1","firstName"=>"Test Person 1"));
+		$loginDetails = LoginDetails::create(array("personId"=>$testPerson->getAttribute('id'),"loginName"=>"testPerson1","password"=>"testPerson1"));
+		Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
+		$this->login("testPerson1","testPerson1");
+		
+		// create a sample account
+		TransactionManager::executeInTransaction(function(){
+			SampleAccount::create(array("accountName"=>"sampleAccount2","name"=>"Sample Account2","contact"=>array("email"=>"sample2@example.com","phone"=>"1234567890")));
+		},array(),true);
+		
+		// search in created personn context
+		$this->login("testPerson1","testPerson1");
+		$isException = false;
+		try{
+			$sampleAccounts = SampleAccount::find(array());
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		parent::assertCount(1,$sampleAccounts);
+		parent::assertEquals('sampleAccount2', $sampleAccounts[0]->getAttribute("accountName"));
+		parent::assertEquals('Sample Account2', $sampleAccounts[0]->getAttribute("name"));
+		
 	}
 	
 	function testUpdate(){
@@ -193,6 +221,30 @@ class TestAccount extends TestBase {
 		}
 		parent::assertTrue(!$isException);
 		parent::assertEquals(array("email"=>"sample@abcd.com"),$sampleAccountWithContact->getAttribute("contact"));
+		
+		// create test person
+		$testPerson = Person::create(array("accountName"=>"testPerson1","firstName"=>"Test Person 1"));
+		$loginDetails = LoginDetails::create(array("personId"=>$testPerson->getAttribute('id'),"loginName"=>"testPerson1","password"=>"testPerson1"));
+		Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
+		$this->login("testPerson1","testPerson1");
+		
+		// create a sample account
+		$testPersonSampleAccount = null;
+		TransactionManager::executeInTransaction(function() use(&$testPersonSampleAccount){
+			$testPersonSampleAccount = SampleAccount::create(array("accountName"=>"sampleAccount3","name"=>"Sample Account3"));
+		},array(),true);
+		
+		// update in created person context
+		$this->login("testPerson1","testPerson1");
+		$isException = false;
+		try{
+			$testPersonSampleAccount->setAttribute('name', "Test Person's sample account" );
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		parent::assertEquals('sampleAccount3', $testPersonSampleAccount->getAttribute("accountName"));
+		parent::assertEquals("Test Person's sample account" , $testPersonSampleAccount->getAttribute("name"));
 		
 	}
 	

@@ -10,7 +10,7 @@ CREATE TABLE sample_account
 (
     ID bigint(10) unsigned NOT NULL AUTO_INCREMENT,
     ACCOUNT_ID bigint(10) unsigned NOT NULL,
-    NAME varchar(20),
+    NAME varchar(30),
     PRIMARY KEY (ID),
     UNIQUE (ID, ACCOUNT_ID)
 );

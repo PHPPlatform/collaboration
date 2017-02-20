@@ -28,24 +28,18 @@ class TestOrganization extends TestBase {
 		TransactionManager::executeInTransaction(function() use (&$orgOwner,&$orgAdmin,&$orgMember){
 			$orgOwner = Person::create(array("accountName"=>"orgOwner1","firstName"=>"Organization Owner 1"));
 			$loginDetails = LoginDetails::create(array("personId"=>$orgOwner->getAttribute('id'),"loginName"=>"orgOwner1","password"=>"orgOwner1"));
-			TransactionManager::executeInTransaction(function () use ($loginDetails){
-				Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
-			},array(),true);
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
 			
 			$orgOwner->addRoles(array(new Role(null,'orgCreator')));
 			
 			$orgAdmin = Person::create(array("accountName"=>"orgAdmin1","firstName"=>"Organization Admin 1"));
 			$loginDetails = LoginDetails::create(array("personId"=>$orgAdmin->getAttribute('id'),"loginName"=>"orgAdmin1","password"=>"orgAdmin1"));
-			TransactionManager::executeInTransaction(function () use ($loginDetails){
-				Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
-			},array(),true);
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
 			
 			
 			$orgMember = Person::create(array("accountName"=>"orgMember1","firstName"=>"Organization Member 1"));
 			$loginDetails = LoginDetails::create(array("personId"=>$orgMember->getAttribute('id'),"loginName"=>"orgMember1","password"=>"orgMember1"));
-			TransactionManager::executeInTransaction(function () use ($loginDetails){
-				Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
-			},array(),true);
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
 			
 		},array(),true);
 		
