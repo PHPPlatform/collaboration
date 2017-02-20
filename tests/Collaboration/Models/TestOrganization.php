@@ -12,7 +12,6 @@ use PhpPlatform\Collaboration\Models\Role;
 use PhpPlatform\Persist\Reflection;
 use PhpPlatform\Collaboration\Models\OrganizationPerson;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
-use PhpPlatform\Collaboration\Util\PersonSession;
 
 class TestOrganization extends TestBase {
 	
@@ -168,11 +167,6 @@ class TestOrganization extends TestBase {
 		
 		// find without session
 		$this->login();
-		/**
-		 * @todo this is for trvis log , remove it once done
-		 */
-		print_r(PersonSession::getPerson());
-		print_r(PersonSession::getAccounts());
 		
 		$isException = false;
 		try{
