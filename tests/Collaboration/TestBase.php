@@ -7,6 +7,7 @@ use PhpPlatform\Collaboration\Session;
 use PhpPlatform\Collaboration\Models\Person;
 use PhpPlatform\Tests\PersistUnit\ModelTest as PersistUnitTestCase;
 use PhpPlatform\Persist\Reflection;
+use PhpPlatform\Collaboration\Util\PersonSession;
 
 
 abstract class TestBase extends PersistUnitTestCase{
@@ -49,8 +50,7 @@ abstract class TestBase extends PersistUnitTestCase{
     }
     
     public function login($loginName = null,$password = null){
-    	session_id('abcd'.rand(1,100).rand(100,1000).rand(500,600).'qwertcyhsu');
-    	Reflection::setValue('PhpPlatform\Collaboration\Session', 'sessionObj', null, null);
+    	PersonSession::clear();
     	if(isset($loginName)){
     		Person::login($loginName, $password);
     	}

@@ -125,12 +125,13 @@ class Session extends Cache{
 		session_start();
 		session_regenerate_id();
 		session_write_close();
-		self::$sessionObj = new Session();
-		Reflection::invokeArgs(get_parent_class(), 'setData', self::$sessionObj,array($data));
 		
 		if($deleteOldSession){
 			parent::reset();
 		}
+		
+		self::$sessionObj = new Session();
+		Reflection::invokeArgs(get_parent_class(), 'setData', self::$sessionObj,array($data));
 		
 		return self::$sessionObj;
 	}
