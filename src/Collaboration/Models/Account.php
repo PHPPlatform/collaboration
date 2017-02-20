@@ -262,11 +262,12 @@ abstract class Account extends Model {
         if($sessionPerson){
             $accountClass = get_class();
             $sessionPersonAccountId = $sessionPerson['accountId'];
+            $sessionPersonId = $sessionPerson['id'];
 
             $accountIdExpr = "{".$accountClass."."."id"."}";
             $accountCreatedByIdExpr = "{".$accountClass."."."createdById"."}";
             
-            $accessQuery = "$accountIdExpr = $sessionPersonAccountId OR $accountCreatedByIdExpr = $sessionPersonAccountId";
+            $accessQuery = "$accountIdExpr = $sessionPersonAccountId OR $accountCreatedByIdExpr = $sessionPersonId";
             return $accessQuery;
         }
         return false;
@@ -277,7 +278,8 @@ abstract class Account extends Model {
     	$sessionPerson = PersonSession::getPerson();
         if(isset($sessionPerson)){
             $sessionPersonAccountId = $sessionPerson['accountId'];
-            return ($this->id == $sessionPersonAccountId) || ($this->createdById == $sessionPersonAccountId);
+            $sessionPersonId = $sessionPerson['id'];
+            return ($this->id == $sessionPersonAccountId) || ($this->createdById == $sessionPersonId);
         }
         return false;
     }

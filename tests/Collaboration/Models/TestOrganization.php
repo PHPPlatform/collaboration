@@ -11,6 +11,7 @@ use PhpPlatform\Collaboration\Models\LoginDetails;
 use PhpPlatform\Collaboration\Models\Role;
 use PhpPlatform\Persist\Reflection;
 use PhpPlatform\Collaboration\Models\OrganizationPerson;
+use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 
 class TestOrganization extends TestBase {
 	
@@ -25,7 +26,7 @@ class TestOrganization extends TestBase {
 		$orgAdmin = null;
 		$orgMember = null;
 		TransactionManager::executeInTransaction(function() use (&$orgOwner,&$orgAdmin,&$orgMember){
-			$orgOwner = Person::create(array("accountName"=>"orgOwner1","name"=>"Organization Owner 1"));
+			$orgOwner = Person::create(array("accountName"=>"orgOwner1","firstName"=>"Organization Owner 1"));
 			$loginDetails = LoginDetails::create(array("personId"=>$orgOwner->getAttribute('id'),"loginName"=>"orgOwner1","password"=>"orgOwner1"));
 			TransactionManager::executeInTransaction(function () use ($loginDetails){
 				Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
@@ -33,14 +34,14 @@ class TestOrganization extends TestBase {
 			
 			$orgOwner->addRoles(array(new Role(null,'orgCreator')));
 			
-			$orgAdmin = Person::create(array("accountName"=>"orgAdmin1","name"=>"Organization Admin 1"));
+			$orgAdmin = Person::create(array("accountName"=>"orgAdmin1","firstName"=>"Organization Admin 1"));
 			$loginDetails = LoginDetails::create(array("personId"=>$orgAdmin->getAttribute('id'),"loginName"=>"orgAdmin1","password"=>"orgAdmin1"));
 			TransactionManager::executeInTransaction(function () use ($loginDetails){
 				Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
 			},array(),true);
 			
 			
-			$orgMember = Person::create(array("accountName"=>"orgMember1","name"=>"Organization Member 1"));
+			$orgMember = Person::create(array("accountName"=>"orgMember1","firstName"=>"Organization Member 1"));
 			$loginDetails = LoginDetails::create(array("personId"=>$orgMember->getAttribute('id'),"loginName"=>"orgMember1","password"=>"orgMember1"));
 			TransactionManager::executeInTransaction(function () use ($loginDetails){
 				Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
@@ -149,6 +150,15 @@ class TestOrganization extends TestBase {
 		parent::assertEquals("myOrg2", $org2->getAttribute("accountName"));
 		parent::assertEquals("My Organization 2", $org2->getAttribute("name"));
 		
+		
+		// create with parentId in data
+		$isException = false;
+		try{
+			Organization::create(array("accountName"=>"myOrg3","name"=>"My Organization 3","parentId"=>$org2->getAttribute('id')));
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
 	}
 	
 	function testFind(){
@@ -302,6 +312,17 @@ class TestOrganization extends TestBase {
 		parent::assertTrue(!$isException);
 		parent::assertEquals('My Org 1 New New New', $organization->getAttribute('name'));
 		
+		// update parentId
+		$this->login('orgOwner1', 'orgOwner1');
+		$childOrg = Organization::create(array('name'=>"My Org 2",'accountName'=>'myOrg2'));
+		$isException = false;
+		try{
+			$childOrg->setAttribute('parentId', $organization->getAttribute('id'));
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
 	}
 	
     function testDelete(){
@@ -390,14 +411,47 @@ class TestOrganization extends TestBase {
 	
 	function testGetAttributes(){
 		$organization = null;
-		TransactionManager::executeInTransaction(function() use(&$organization){
+		$childOrg = null;
+		TransactionManager::executeInTransaction(function() use(&$organization,&$childOrg){
 			$organization = Organization::create(array('name'=>"My Org 1",'accountName'=>'myOrg1'));
+			$childOrg = Organization::create(array('name'=>"My Org 2",'accountName'=>'myOrg2'));
+			$organization->addChildren(array($childOrg));
 		},array(),true);
 	
 		parent::assertEquals(1,$organization->getAttribute('id'));
 		parent::assertEquals('My Org 1',$organization->getAttribute('name'));
 		parent::assertEquals('myOrg1',$organization->getAttribute('accountName'));
+		parent::assertEquals(null,$childOrg->getAttribute('parentId'));
+		
 	}
+	
+	function testParentAndChildOrgs(){
+		$this->login('orgOwner1', 'orgOwner1');
+		$organization1 = Organization::create(array('name'=>"My Org 1",'accountName'=>'myOrg1'));
+		$organization2 = Organization::create(array('name'=>"My Org 2",'accountName'=>'myOrg2'));
+		$organization3 = Organization::create(array('name'=>"My Org 3",'accountName'=>'myOrg3'));
+		$organization4 = Organization::create(array('name'=>"My Org 4",'accountName'=>'myOrg4'));
+		TransactionManager::executeInTransaction(function() use(&$organization1,&$organization2,&$organization3,&$organization4){
+			$organization1->addChildren(array($organization2));
+			$organization2->addChildren(array($organization3,$organization4));
+		},array(),true);
+		
+		// test getChildren
+		$org1Childs = $organization1->getChildren();
+		parent::assertCount(1, $org1Childs);
+		parent::assertEquals($organization2->getAttributes("name"), $org1Childs[0]->getAttributes("name"));
+		
+		$org2Childs = $organization2->getChildren();
+		parent::assertCount(2, $org2Childs);
+		
+		$org3Childs = $organization3->getChildren();
+		parent::assertCount(0, $org3Childs);
+		
+		
+		
+	}
+	
+	
 	
 	
 }

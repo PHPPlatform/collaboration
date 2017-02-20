@@ -80,6 +80,9 @@ class Organization extends Account {
     static function create($data){
     	try{
     		TransactionManager::startTransaction();
+    		if(isset($data["parentId"])){
+    			throw new BadInputException("parentId is not accepted during creation , please use addChildren api");
+    		}
     		$organization = parent::create($data);
     		
     		// add session person as owner of this organization
@@ -124,7 +127,9 @@ class Organization extends Account {
      * @access inherit
      */
     function setAttributes($args){
-        unset($args["parentId"]);
+    	if(isset($args["parentId"])){
+    		throw new BadInputException("Can not set parentId , please use addChildren/removeChildren api");
+    	}
         return parent::setAttributes($args);
     }
 
@@ -188,12 +193,20 @@ class Organization extends Account {
      */
     private function addToParent($parentObj){
         $parentId = $parentObj->getAttribute("id");
-        if($this->parentId != $parentId){
-            if($this->parentId != null){
-            	throw new BadInputException("This organization is already a child of another organization with id ".$this->parentId);
-            }
-            parent::setAttributes(array("parentId"=>$parentId));
+        if($this->parentId != null){
+        	throw new BadInputException("This organization is already a child of another organization with id ".$this->parentId);
         }
+        $parentObj_AllParents = null;
+        TransactionManager::executeInTransaction(function() use(&$parentObj_AllParents,$parentObj) {
+        	$parentObj_AllParents = $parentObj->getAllParents();
+        },array(),true);
+        $parentObj_AllParents[] = $parentObj;
+        foreach ($parentObj_AllParents as $parent){
+        	if($parent->getAttribute('id') == $this->id){
+        		throw new BadInputException("Circular child-parent connection");
+        	}
+        }
+        parent::setAttributes(array("parentId"=>$parentId));
     }
 
     /**
