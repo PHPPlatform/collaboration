@@ -9,7 +9,7 @@ use PhpPlatform\Errors\Exceptions\Persistence\NoAccessException;
 use PhpPlatform\Tests\Collaboration\SampleModels\FreeSampleAccount;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Collaboration\Models\Contact;
-use PhpPlatform\Errors\Exceptions\Persistence\BadQueryException;
+use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 
 class TestAccount extends TestBase {
 	
@@ -165,6 +165,15 @@ class TestAccount extends TestBase {
 		parent::assertEquals("New SampleAccount Name",$sampleAccount->getAttribute("name"));
 		parent::assertEquals("New SampleAccount Account Name",$sampleAccount->getAttribute("accountName"));
 		
+		// try updating contactId
+		$isException = false;
+		try{
+			$sampleAccount->setAttribute("contactId",2);
+		}catch (BadInputException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
 		// update contact for account having no prior contact
 		$isException = false;
 		try{
@@ -266,9 +275,7 @@ class TestAccount extends TestBase {
 				$sampleAccountWithContact->delete();
 			}catch (NoAccessException $e){
 				$isException = true;
-			}/* catch (BadQueryException $bqe){
-				exit();
-			} */
+			}
 			parent::assertTrue(!$isException);
 			$sampleAccounts = null;
 			$contacts = null;

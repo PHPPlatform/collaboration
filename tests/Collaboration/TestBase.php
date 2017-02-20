@@ -45,7 +45,15 @@ abstract class TestBase extends PersistUnitTestCase{
     }
     
     public function setSystemAdminSession(){
-    	Person::login('systemAdmin', 'systemAdmin');
+    	$this->login('systemAdmin', 'systemAdmin');
+    }
+    
+    public function login($loginName = null,$password = null){
+    	session_id('abcd'.rand(1,100).rand(100,1000).rand(500,600).'qwertcyhsu');
+    	Reflection::setValue('PhpPlatform\Collaboration\Session', 'sessionObj', null, null);
+    	if(isset($loginName)){
+    		Person::login($loginName, $password);
+    	}
     }
     
     

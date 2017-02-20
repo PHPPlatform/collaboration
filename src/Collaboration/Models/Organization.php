@@ -75,10 +75,31 @@ class Organization extends Account {
      * @param array $data
      * @return Organization
      * 
-     * @access inherit
+     * @access ("role|orgCreator",inherit)
      */
     static function create($data){
-        return parent::create($data);
+    	try{
+    		TransactionManager::startTransaction();
+    		$organization = parent::create($data);
+    		
+    		// add session person as owner of this organization
+    		$sessionPersonId = PersonSession::getPersonId();
+    		if($sessionPersonId){
+    			TransactionManager::executeInTransaction(function() use($organization,$sessionPersonId){
+    				OrganizationPerson::create(array(
+    						"organizationId"=>$organization->getAttribute('id'),
+    						"personId"=>$sessionPersonId,
+    						"type"=>OrganizationPerson::TYPE_OWNER
+    				));
+    			},array(),true);
+    		}
+    		
+    		TransactionManager::commitTransaction();
+    	}catch (\Exception $e){
+    		TransactionManager::abortTransaction();
+    		throw $e;
+    	}
+        return $organization;
     }
 
     /**
@@ -259,7 +280,7 @@ class Organization extends Account {
      * 
      * @access ("person|systemAdmin","function|canEdit")
      */
-    function addPeople($people){
+    function addPeople($people, $type = OrganizationPerson::TYPE_MEMBER){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
         if(!is_array($people)) throw new BadInputException("$people is not array");
         if(!self::UpdateAccess()){ throw new NoAccessException('No access to add people');} // force the access check
@@ -268,7 +289,8 @@ class Organization extends Account {
             foreach($people as $person){
                 OrganizationPerson::create(array(
                 		"organizationId"=>$this->id,
-                		"personId"=>$person->getAttribute("id")
+                		"personId"=>$person->getAttribute("id"),
+                		"type"=>$type
                 ));
             }
             TransactionManager::commitTransaction();
@@ -300,45 +322,64 @@ class Organization extends Account {
         }
     }
     
-    protected static function canCreate($data = array()){
-    	return PersonSession::hasRole('orgCreator');
-    }
-    
     protected static function canRead($args = array()){
     	$readExpr = parent::canRead($args);
-    	if(PersonSession::hasRole('orgReader')){
-    		// can read all the org he belongs to
-    		$belongingOrgs = PersonSession::getOrganizations();
-    		if(count($belongingOrgs) > 0 ){
-    			$accountClass = get_parent_class();
-    			$accountNameExpr = "{".$accountClass."."."accountName"."}";
-    			$dbs = TransactionManager::getConnection();
-    			$belongingOrgsStr = "'".implode("','", $dbs->escape_string($belongingOrgs))."'";
-    			 
-    			$readExpr = "($readExpr) OR $accountNameExpr in ($belongingOrgsStr)";
-    		}
+    	// can read all the org he belongs to
+    	$belongingOrgs = PersonSession::getOrganizations();
+    	if(count($belongingOrgs) > 0 ){
+    		$accountClass = get_parent_class();
+    		$accountNameExpr = "{".$accountClass."."."accountName"."}";
+    		$dbs = TransactionManager::getConnection();
+    		
+    		$belongingOrgs = array_map(function($belongingOrg) use ($dbs){
+    			return $dbs->escape_string($belongingOrg);
+    		}, $belongingOrgs);
+    		
+    		$belongingOrgsStr = "'".implode("','", $belongingOrgs)."'";
+    		 
+    		$readExpr = "($readExpr) OR $accountNameExpr in ($belongingOrgsStr)";
     	}
     	return $readExpr;
     }
     
     protected function canEdit($args){
     	$canEdit = parent::canEdit($args);
-    	if(!$canEdit && PersonSession::hasRole('orgEditor')){
-    		$belongingOrgs = PersonSession::getOrganizations();
-    		$canEdit = in_array($this->getAttribute('accountName'), $belongingOrgs);
+    	if(!$canEdit){
+    		
+    		// owner or administrator can edit organization 
+    		$organizationPerson = OrganizationPerson::find(array(
+    				"organizationId"=>$this->id,
+    				"personId"=>PersonSession::getPersonId(),
+    				"type"=>array(
+    						self::OPERATOR_IN=>array(
+    								OrganizationPerson::TYPE_OWNER,
+    								OrganizationPerson::TYPE_ADMINISTRATOR
+    						)
+    				)
+    		));
+    		if(count($organizationPerson) == 1){
+    			$canEdit = true;
+    		}
+    		
     	}
     	return $canEdit;
     }
     
     protected function canDelete(){
     	$canDelete = parent::canDelete();
-    	if(!$canDelete && PersonSession::hasRole('orgEraser')){
-    		$belongingOrgs = PersonSession::getOrganizations();
-    		$canDelete = in_array($this->getAttribute('accountName'), $belongingOrgs);
+    	if(!$canDelete){
+    		// only owner can delete organization
+    		$organizationPerson = OrganizationPerson::find(array(
+    				"organizationId"=>$this->id,
+    				"personId"=>PersonSession::getPersonId(),
+    				"type"=>OrganizationPerson::TYPE_OWNER
+    		));
+    		if(count($organizationPerson) == 1){
+    			$canDelete = true;
+    		}
     	}
     	return $canDelete;
     }
-    
 
 
 }

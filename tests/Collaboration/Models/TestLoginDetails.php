@@ -97,7 +97,7 @@ class TestLoginDetails extends TestBase {
 		},array(),true);
 		
 		// login with test person 1
-		Person::login('testPerson1', '123');
+		$this->login('testPerson1', '123');
 		
 		// create with test person1's session 
 		$isException = false;
@@ -132,7 +132,7 @@ class TestLoginDetails extends TestBase {
 		},array(),true);
 		
 		// login with test person
-		Person::login('testPerson1', '123');
+		$this->login('testPerson1', '123');
 		
 		// find with test person
 		$loginDetails = LoginDetails::find(array("loginName"=>"systemAdmin"));
@@ -189,7 +189,7 @@ class TestLoginDetails extends TestBase {
 		
 		
 		// delete with test person login
-		Person::login('testPerson1', '123');
+		$this->login('testPerson1', '123');
 		$isException = false;
 		try{
 			$systemAdminLoginDetails->delete();
@@ -440,7 +440,7 @@ class TestLoginDetails extends TestBase {
 		
 		
 		// Change Password with test person login
-		Person::login('testPerson1', '123');
+		$this->login('testPerson1', '123');
 		$isException = false;
 		try{
 			$systemAdminLoginDetails->changePassword("newSystemAdminPass");
@@ -457,7 +457,7 @@ class TestLoginDetails extends TestBase {
 			$isException = true;
 		}
 		parent::assertTrue(!$isException);
-		Person::login('testPerson1', 'newTestPersonPass');
+		$this->login('testPerson1', 'newTestPersonPass');
 		
 		
 		// test with systemAdmin login
@@ -469,7 +469,7 @@ class TestLoginDetails extends TestBase {
 			$isException = true;
 		}
 		parent::assertTrue(!$isException);
-		Person::login('systemAdmin', 'newSystemAdminPass');
+		$this->login('systemAdmin', 'newSystemAdminPass');
 		
 	}
 	
@@ -523,7 +523,7 @@ class TestLoginDetails extends TestBase {
 		
 		
 		// verify test person 2 with test person 1 session
-		Person::login('testPerson1', '123');
+		$this->login('testPerson1', '123');
 		
 		$isException = false;
 		try{
@@ -543,7 +543,7 @@ class TestLoginDetails extends TestBase {
 		parent::assertTrue($isException);
 		
 		//login with test person 2
-		Person::login('testPerson2', 'abc');
+		$this->login('testPerson2', 'abc');
 		
 		// verify with wrong token
 		$isException = false;
@@ -613,7 +613,7 @@ class TestLoginDetails extends TestBase {
 
 
 		// activate test person 2 with test person 1 session
-		Person::login('testPerson1', '123');
+		$this->login('testPerson1', '123');
 
 		// manually change the status to DISABLED
 		$this->manuallyChangeStatus($testPerson2LoginDetails,LoginDetails::STATUS_DISABLED);
@@ -639,7 +639,7 @@ class TestLoginDetails extends TestBase {
 		$this->manuallyChangeStatus($testPerson2LoginDetails,LoginDetails::STATUS_PENDING_VERIFICATION);
 		
 		//login with test person 2
-		Person::login('testPerson2', 'abc');
+		$this->login('testPerson2', 'abc');
 		
 		// activate logindetails in PENDING VERIFICATION status 
 		$isException = false;
@@ -711,7 +711,7 @@ class TestLoginDetails extends TestBase {
 
 		// disable test person 2 with test person 1 session
 		$this->manuallyChangeStatus($testPerson1LoginDetails,LoginDetails::STATUS_ACTIVE);
-		Person::login('testPerson1', '123');
+		$this->login('testPerson1', '123');
 
 		// manually change the status to ACTIVE
 		$this->manuallyChangeStatus($testPerson2LoginDetails,LoginDetails::STATUS_ACTIVE);
@@ -740,7 +740,7 @@ class TestLoginDetails extends TestBase {
 		$this->manuallyChangeStatus($testPerson2LoginDetails,LoginDetails::STATUS_PENDING_VERIFICATION);
 
 		//login with test person 2
-		Person::login('testPerson2', 'abc');
+		$this->login('testPerson2', 'abc');
 
 		// disable logindetails in PENDING VERIFICATION status
 		$isException = false;
@@ -817,14 +817,14 @@ class TestLoginDetails extends TestBase {
 		
 		$isException = false;
 		try{
-			Person::login('testPerson1', '123');
+			$this->login('testPerson1', '123');
 		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
 			$isException = true;
 		}
 		parent::assertTrue($isException);
 		
 		// login from test person 1
-		Person::login('newLoginName1', '123');
+		$this->login('newLoginName1', '123');
 		
 		// change the name of test person 2
 		$isException = false;
@@ -836,7 +836,7 @@ class TestLoginDetails extends TestBase {
 		parent::assertTrue($isException);
 		
 		// login from test person 2
-		Person::login('testPerson2', 'abc');
+		$this->login('testPerson2', 'abc');
 		
 		// change the name of test person 2 with wrong password
 		$isException = false;
@@ -857,14 +857,14 @@ class TestLoginDetails extends TestBase {
 		parent::assertTrue(!$isException);
 		$isException = false;
 		try{
-			Person::login('testPerson2', 'abc');
+			$this->login('testPerson2', 'abc');
 		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
 			$isException = true;
 		}
 		parent::assertTrue($isException);
 		
 		// login from test person 2
-		Person::login('newLoginName2', 'abc');
+		$this->login('newLoginName2', 'abc');
 		
 	}
 	

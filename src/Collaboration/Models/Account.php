@@ -9,6 +9,7 @@ use PhpPlatform\Collaboration\Model;
 use PhpPlatform\Persist\MySql;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Collaboration\Util\PersonSession;
+use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 
 /**
  * @tableName account
@@ -148,7 +149,7 @@ abstract class Account extends Model {
     		TransactionManager::startTransaction();
 
     		if(isset($args["contactId"])){
-    			unset($args["contactId"]);
+    			throw new BadInputException("contactId can not be set , please set contact instead");
     		}
     		
     		// modify contact
@@ -282,7 +283,7 @@ abstract class Account extends Model {
     }
     
     protected function canDelete(){
-    	return $this->canEdit(array());
+    	return self::canEdit(array());
     }
 
 }

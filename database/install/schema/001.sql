@@ -188,7 +188,7 @@ ALTER TABLE organization_person
     ADD FOREIGN KEY (ORGANIZATION_ID)
     REFERENCES organization (ID)
     ON UPDATE CASCADE
-    ON DELETE RESTRICT
+    ON DELETE CASCADE
 ;
 
 ALTER TABLE organization_person

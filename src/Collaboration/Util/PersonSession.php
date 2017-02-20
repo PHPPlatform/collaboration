@@ -6,6 +6,7 @@ use PhpPlatform\Collaboration\Models\LoginDetails;
 use PhpPlatform\Collaboration\Models\Organization;
 use PhpPlatform\Collaboration\Models\Role;
 use PhpPlatform\Collaboration\Session;
+use PhpPlatform\Persist\Reflection;
 
 class PersonSession {
 	
@@ -66,7 +67,7 @@ class PersonSession {
 	}
 	
 	static public function clear(){
-		Session::getInstance()->refresh(false,true);
+		return Session::getInstance()->reset();
 	}
 	
 	static private function has($account,$type){
@@ -113,6 +114,14 @@ class PersonSession {
 	
 	static public function getPerson(){
 		return Session::getInstance()->get(self::SESSION_PERSON);
+	}
+	
+	static public function getPersonId(){
+		$personSession = self::getPerson();
+		if(is_array($personSession)){
+			return $personSession['id'];
+		}
+		return false;
 	}
 	
 }
