@@ -12,6 +12,7 @@ use PhpPlatform\Collaboration\Models\Role;
 use PhpPlatform\Persist\Reflection;
 use PhpPlatform\Collaboration\Models\OrganizationPerson;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
+use PhpPlatform\Collaboration\Util\PersonSession;
 
 class TestOrganization extends TestBase {
 	
@@ -167,6 +168,12 @@ class TestOrganization extends TestBase {
 		
 		// find without session
 		$this->login();
+		/**
+		 * @todo this is for trvis log , remove it once done
+		 */
+		print_r(PersonSession::getPerson());
+		print_r(PersonSession::getAccounts());
+		
 		$isException = false;
 		try{
 			$organizations = Organization::find(array("name"=>"My Org 1"));
@@ -440,6 +447,39 @@ class TestOrganization extends TestBase {
 		
 		$org3Childs = $organization3->getChildren();
 		parent::assertCount(0, $org3Childs);
+		
+		
+		// test getParent
+		$org1Parent = $organization1->getParent();
+		parent::assertNull($org1Parent);
+		
+		$org2Parent = $organization2->getParent();
+		parent::assertEquals($organization1->getAttribute('name'), $org2Parent->getAttribute('name'));
+		
+		$org3Parent = $organization3->getParent();
+		parent::assertEquals($organization2->getAttribute('name'), $org3Parent->getAttribute('name'));
+		
+		
+		// test getParents
+		$org1Parents = $organization1->getAllParents();
+		parent::assertCount(0,$org1Parents);
+		
+		$org2Parents = $organization2->getAllParents();
+		parent::assertCount(1,$org2Parents);
+		parent::assertEquals($organization1->getAttribute('name'), $org2Parents[0]->getAttribute('name'));
+		
+		$org3Parents = $organization3->getAllParents();
+		parent::assertCount(2,$org3Parents);
+		parent::assertEquals(
+				array(
+					$organization1->getAttribute('name'),
+					$organization2->getAttribute('name')
+				), array(
+					$org3Parents[0]->getAttribute('name'),
+					$org3Parents[1]->getAttribute('name')
+				)
+		);
+		
 		
 		
 		
