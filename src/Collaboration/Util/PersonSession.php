@@ -6,7 +6,6 @@ use PhpPlatform\Collaboration\Models\LoginDetails;
 use PhpPlatform\Collaboration\Models\Organization;
 use PhpPlatform\Collaboration\Models\Role;
 use PhpPlatform\Collaboration\Session;
-use PhpPlatform\Persist\Reflection;
 
 class PersonSession {
 	
@@ -27,15 +26,16 @@ class PersonSession {
 			
 			// orgs from loggedInPerson
 			$orgNames = array();
-			$directOrgObjs = $loggedInPerson->getOrganizations();
-			self::getAllParentOrganizationNames($directOrgObjs, $orgNames);
+			$loggedInPersonOrgs = $loggedInPerson->getOrganizations();
+			foreach ($loggedInPersonOrgs as $orgObj){
+				$orgNames[] = $orgObj->getAttribute("accountName");
+			}
 			
 			// roles from loggedInPerson
 			$allRolesFromloggedInPerson = $loggedInPerson->getRoles(true);
 			$roleNames = array();
 			foreach ($allRolesFromloggedInPerson as $roleObj){
-				$roleName = $roleObj->getAttribute("accountName");
-				$roleNames[] = $roleName;
+				$roleNames[] = $roleObj->getAttribute("accountName");
 			}
 
 			$sessionAccounts["organization"] = $orgNames;
@@ -43,27 +43,6 @@ class PersonSession {
 		}
 
 		Session::getInstance()->set(self::SESSION_ACCOUNTS, $sessionAccounts);
-	}
-
-
-	/**
-	 * @param Organization[] $organizations
-	 * @param string[] $orgNames
-	 */
-	static private function getAllParentOrganizationNames($organizations,&$orgNames){
-		foreach ($organizations as $directOrgObj){
-			$orgAccountName = $directOrgObj->getAttribute("accountName");
-			if(!in_array($orgAccountName, $orgNames)){
-				$orgNames[] = $orgAccountName;
-				$parentOrgs = $directOrgObj->getAllParents();
-				foreach ($parentOrgs as $parentOrg){
-					$orgAccountName = $parentOrg->getAttribute("accountName");
-					if(!in_array($orgAccountName, $orgNames)){
-						$orgNames[] = $orgAccountName;
-					}
-				}
-			}
-		}
 	}
 	
 	static public function clear(){

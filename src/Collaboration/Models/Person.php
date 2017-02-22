@@ -396,8 +396,17 @@ class Person extends Account {
     
     protected static function canRead($args = array()){
     	$readExpr = parent::canRead($args);
-    	if(PersonSession::hasRole('personReader')){
-    		
+    	$sessionOrgAccountNames = PersonSession::getOrganizations();
+    	if(count($sessionOrgAccountNames) > 0){
+    		$sessionOrgObjs = Organization::find(array("accountName"=>array(self::OPERATOR_IN=>$sessionOrgAccountNames)));
+    		$sessionOrgIds = array_map(function($sessionOrgObj){return $sessionOrgObj->getAttribute('id');}, $sessionOrgObjs);
+    		$sessionOrgPersonObjs = OrganizationPerson::find(array("id"=>array(self::OPERATOR_IN=>$sessionOrgIds)));
+    		if(count($sessionOrgPersonObjs) > 0){
+    			$sessionOrgPersonIds = array_map(function($sessionOrgPersonObj){$sessionOrgPersonObj->getAttribute('personId');}, $sessionOrgPersonObjs);
+    			$sessionOrgPersonIdsStr = "'".implode("','", $sessionOrgPersonIds)."'";
+    			$personIdExpr = "{".get_class()."."."id"."}";
+    			$readExpr = "($readExpr) OR $personIdExpr in ($sessionOrgPersonIdsStr)";
+    		}
     	}
     	return $readExpr;
     }

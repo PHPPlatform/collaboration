@@ -8,7 +8,6 @@ namespace PhpPlatform\Collaboration\Models;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Persist\Exception\ObjectStateException;
-use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 use PhpPlatform\Collaboration\Util\PersonSession;
 
 /**
@@ -280,23 +279,60 @@ class Organization extends Account {
     
     /**
      * @throws Exception
-     * @return Person[]
+     * @return Person[][]
      */
-    function getPeople(){
+    function getPeople($type = null){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
+    	$allowedTypes = array(OrganizationPerson::TYPE_OWNER,OrganizationPerson::TYPE_ADMINISTRATOR,OrganizationPerson::TYPE_MEMBER);
+    	if($type == null){
+    		$type = $allowedTypes;
+    	}
+    	if(is_string($type)){
+    		$type = array($type);
+    	}
+    	if(!is_array($type)){
+    		throw new BadInputException("1st parameter is not an array");
+    	}
+    	if(count(array_diff($type, $allowedTypes)) > 0){
+    		throw new BadInputException("1st parameter contains invalid type");
+    	}
+    	$personIdsPerType = array();
     	try{
     		TransactionManager::startTransaction(null,true);
-    		$organizationPersonObjs = OrganizationPerson::find(array("organizationId"=>$this->id));
+    		$organizationPersonObjs = OrganizationPerson::find(array("organizationId"=>$this->id,"type"=>array(self::OPERATOR_IN=>$type)));
     		$personIds = array();
     		foreach ($organizationPersonObjs as $organizationPersonObj){
-    			$personIds[] = $organizationPersonObj->getAttribute("personId");
+    			$personId= $organizationPersonObj->getAttribute("personId");
+    			$personIds[] = $personId;
+    			$type = $organizationPersonObj->getAttribute('type');
+    			if(!array_key_exists($type, $personIdsPerType)){
+    				$personIdsPerType[$type] = array();
+    			}
+    			$personIdsPerType[$type][] = $personId;
     		}
     		TransactionManager::commitTransaction();
     	}catch (\Exception $e){
     		TransactionManager::abortTransaction();
     		throw $e;
     	}
-    	return Person::find(array("id"=>array(self::OPERATOR_IN=>$personIds)));
+    	$people = Person::find(array("id"=>array(self::OPERATOR_IN=>$personIds)));
+    	$peopleAssociatedFromId = array();
+    	foreach ($people as $person){
+    		$id = $person->getAttribute('id');
+    		$peopleAssociatedFromId[$id] = $person;
+    	}
+    	
+    	$peopleAssociatedFromType = array();
+    	foreach ($personIdsPerType as $type=>$personIds){
+    		if(!array_key_exists($type, $peopleAssociatedFromType)){
+    			$peopleAssociatedFromType[$type] = array();
+    		}
+    		foreach ($personIds as $personId){
+    			$peopleAssociatedFromType[$type][] = $peopleAssociatedFromId[$personId];
+    		}
+    	}
+    	
+    	return $peopleAssociatedFromType;
     }
 
     /**
