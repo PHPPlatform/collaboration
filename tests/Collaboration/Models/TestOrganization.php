@@ -474,9 +474,218 @@ class TestOrganization extends TestBase {
 				)
 		);
 		
+	}
+	
+	function testAddRemoveChildren(){
+		/**
+		 * data
+		 */
+		$parentOwn = null;
+		$parentAdmin = null;
+		$parentMember = null;
+		$parentNone = null;
+		
+		$childOwn = null;
+		$childAdmin = null;
+		$childMember = null;
+		$childNone = null;
+		
+		$owner = $this->orgOwner;
+		
+		TransactionManager::executeInTransaction(function() 
+			use($owner,&$parentOwn,&$parentAdmin,&$parentMember,&$parentNone,&$childOwn,&$childAdmin,&$childMember,&$childNone){
+			$parentOwn    = Organization::create(array('name'=>"My Org 1",'accountName'=>'myOrg1'));
+		    OrganizationPerson::create(array("organizationId"=>$parentOwn->getAttribute('id'),"personId"=>$owner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_OWNER));
+			
+		    $parentAdmin  = Organization::create(array('name'=>"My Org 2",'accountName'=>'myOrg2'));
+		    OrganizationPerson::create(array("organizationId"=>$parentAdmin->getAttribute('id'),"personId"=>$owner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_ADMINISTRATOR));
+			
+		    $parentMember = Organization::create(array('name'=>"My Org 3",'accountName'=>'myOrg3'));
+		    OrganizationPerson::create(array("organizationId"=>$parentMember->getAttribute('id'),"personId"=>$owner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_MEMBER));
+		    
+		    $parentNone   = Organization::create(array('name'=>"My Org 4",'accountName'=>'myOrg4'));
+		    
+		    $childOwn     = Organization::create(array('name'=>"My Org 5",'accountName'=>'myOrg5'));
+		    OrganizationPerson::create(array("organizationId"=>$childOwn->getAttribute('id'),"personId"=>$owner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_OWNER));
+		    
+		    $childAdmin   = Organization::create(array('name'=>"My Org 6",'accountName'=>'myOrg6'));
+		    OrganizationPerson::create(array("organizationId"=>$childAdmin->getAttribute('id'),"personId"=>$owner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_ADMINISTRATOR));
+		    
+		    $childMember  = Organization::create(array('name'=>"My Org 7",'accountName'=>'myOrg7'));
+		    OrganizationPerson::create(array("organizationId"=>$childMember->getAttribute('id'),"personId"=>$owner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_MEMBER));
+		    
+		    $childNone    = Organization::create(array('name'=>"My Org 8",'accountName'=>'myOrg8'));
+		},array(),true);
+		
+		$this->login('orgOwner1','orgOwner1');
+		
+		// ---------------------------------------------------------------
+		
+		// parent-owner + child-owner
+		$this->executeAddRemoveChildren(true,$parentOwn, array($childOwn));
+		parent::assertEquals($parentOwn->getAttribute('name'), $childOwn->getParent()->getAttribute('name'));
+		$this->executeAddRemoveChildren(false, $parentOwn, array($childOwn));
+		parent::assertEquals(null, $childOwn->getParent());
+		
+		// parent-owner + child-admin
+		$this->executeAddRemoveChildren(true,$parentOwn, array($childAdmin));
+		parent::assertEquals($parentOwn->getAttribute('name'), $childAdmin->getParent()->getAttribute('name'));
+		$this->executeAddRemoveChildren(false, $parentOwn, array($childAdmin));
+		parent::assertEquals(null, $childAdmin->getParent());
+		
+		// parent-owner + child-member
+		$this->executeAddRemoveChildren(true,$parentOwn, array($childMember),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentOwn, array($childMember));
+		$this->executeAddRemoveChildren(false,$parentOwn, array($childMember),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentOwn, array($childMember));
 		
 		
+		// parent-owner + child-none
+		$this->executeAddRemoveChildren(true,$parentOwn, array($childNone),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentOwn, array($childNone));
+		$this->executeAddRemoveChildren(false,$parentOwn, array($childNone),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentOwn, array($childNone));
 		
+		// ----------------------------------------------------------------
+		
+		// parent-admin + child-owner
+		$this->executeAddRemoveChildren(true,$parentAdmin, array($childOwn));
+		parent::assertEquals($parentAdmin->getAttribute('name'), $childOwn->getParent()->getAttribute('name'));
+		$this->executeAddRemoveChildren(false, $parentAdmin, array($childOwn));
+		parent::assertEquals(null, $childOwn->getParent());
+		
+		// parent-admin + child-admin
+		$this->executeAddRemoveChildren(true,$parentAdmin, array($childAdmin));
+		parent::assertEquals($parentAdmin->getAttribute('name'), $childAdmin->getParent()->getAttribute('name'));
+		$this->executeAddRemoveChildren(false, $parentAdmin, array($childAdmin));
+		parent::assertEquals(null, $childAdmin->getParent());
+		
+		// parent-admin + child-member
+		$this->executeAddRemoveChildren(true,$parentAdmin, array($childMember),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentAdmin, array($childMember));
+		$this->executeAddRemoveChildren(false,$parentAdmin, array($childMember),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentAdmin, array($childMember));
+		
+		// parent-admin + child-none
+		$this->executeAddRemoveChildren(true,$parentAdmin, array($childNone),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentAdmin, array($childNone));
+		$this->executeAddRemoveChildren(false,$parentAdmin, array($childNone),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentAdmin, array($childNone));
+		
+		// ----------------------------------------------------------------
+		
+		// parent-member + child-owner
+		$this->executeAddRemoveChildren(true,$parentMember, array($childOwn),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentMember, array($childOwn));
+		$this->executeAddRemoveChildren(false,$parentMember, array($childOwn),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentMember, array($childOwn));
+		
+		// parent-member + child-admin
+		$this->executeAddRemoveChildren(true,$parentMember, array($childAdmin),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentMember, array($childAdmin));
+		$this->executeAddRemoveChildren(false,$parentMember, array($childAdmin),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentMember, array($childAdmin));
+		
+		// parent-member + child-member
+		$this->executeAddRemoveChildren(true,$parentMember, array($childMember),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentMember, array($childMember));
+		$this->executeAddRemoveChildren(false,$parentMember, array($childMember),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentMember, array($childMember));
+		
+		// parent-member + child-none
+		$this->executeAddRemoveChildren(true,$parentMember, array($childNone),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentMember, array($childNone));
+		$this->executeAddRemoveChildren(false,$parentMember, array($childNone),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentMember, array($childNone));
+				
+		// ----------------------------------------------------------------
+		
+		// parent-none + child-owner
+		$this->executeAddRemoveChildren(true,$parentNone, array($childOwn),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentNone, array($childOwn));
+		$this->executeAddRemoveChildren(false,$parentNone, array($childOwn),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentNone, array($childOwn));
+		
+		// parent-none + child-admin
+		$this->executeAddRemoveChildren(true,$parentNone, array($childAdmin),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentNone, array($childAdmin));
+		$this->executeAddRemoveChildren(false,$parentNone, array($childAdmin),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentNone, array($childAdmin));
+		
+		// parent-none + child-member
+		$this->executeAddRemoveChildren(true,$parentNone, array($childMember),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentNone, array($childMember));
+		$this->executeAddRemoveChildren(false,$parentNone, array($childMember),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentNone, array($childMember));
+		
+		// parent-none + child-none
+		$this->executeAddRemoveChildren(true,$parentNone, array($childNone),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(true, $parentNone, array($childNone));
+		$this->executeAddRemoveChildren(false,$parentNone, array($childNone),'PhpPlatform\Errors\Exceptions\Persistence\NoAccessException');
+		$this->manuallyAddRemoveChildren(false, $parentNone, array($childNone));
+		
+		// ----------------------------------------------------------------
+		
+		// test with invalid parameters 
+		$this->executeAddRemoveChildren(true,$parentOwn, 'invalid input','PhpPlatform\Errors\Exceptions\Application\BadInputException','1st parameter is not an array');
+		$this->executeAddRemoveChildren(false,$parentOwn, 'invalid input','PhpPlatform\Errors\Exceptions\Application\BadInputException','1st parameter is not an array');
+		$this->executeAddRemoveChildren(true, $parentOwn, array($parentOwn),'PhpPlatform\Errors\Exceptions\Application\BadInputException','An Organization can not be a child its own');
+		$this->executeAddRemoveChildren(true, $parentOwn, array($childOwn));
+		$this->executeAddRemoveChildren(true, $parentAdmin, array($childOwn),'PhpPlatform\Errors\Exceptions\Application\BadInputException','This organization is already a child of another organization with id '.$parentOwn->getAttribute('id'));
+		$this->executeAddRemoveChildren(false, $parentAdmin, array($childOwn),'PhpPlatform\Errors\Exceptions\Application\BadInputException',"Organization ".$childOwn->getAttribute('name')." is not a child of ".$parentAdmin->getAttribute('name'));
+		
+		$this->executeAddRemoveChildren(true, $childOwn, array($parentOwn),'PhpPlatform\Errors\Exceptions\Application\BadInputException','Circular child-parent connection');
+		$this->executeAddRemoveChildren(true, $childOwn, array($parentAdmin));
+		$this->executeAddRemoveChildren(true, $parentAdmin, array($parentOwn),'PhpPlatform\Errors\Exceptions\Application\BadInputException','Circular child-parent connection');
+		
+	}
+	
+	/**
+	 * 
+	 * @param boolean $isAdd
+	 * @param Organization $parent
+	 * @param Organization[] $children
+	 * @param string $exception
+	 * @param string $exceptionMessage
+	 */
+	private function executeAddRemoveChildren($isAdd,$parent,$children,$exception = null,$exceptionMessage = null){
+		$isException = false;
+		$exp = null;
+		try{
+			if($isAdd){
+				$parent->addChildren($children);
+			}else{
+				$parent->removeChildren($children);
+			}
+		}catch (\Exception $e){
+			$isException = true;
+			$exp = $e;
+		}
+		if(isset($exception)){
+			parent::assertTrue($isException);
+		    parent::assertEquals($exception,get_class($exp));
+		    if(isset($exceptionMessage)){
+		    	parent::assertEquals($exceptionMessage, $exp->getMessage());
+		    }
+		}else{
+			parent::assertTrue(!$isException);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param boolean $isAdd
+	 * @param Organization $parent
+	 * @param Organization[] $children
+	 */
+	private function manuallyAddRemoveChildren($isAdd,$parent,$children){
+		TransactionManager::executeInTransaction(function() use ($isAdd,$parent,$children){
+			if($isAdd){
+				$parent->addChildren($children);
+			}else{
+				$parent->removeChildren($children);
+			}
+		},array(),true);
 	}
 	
 	

@@ -196,17 +196,28 @@ class Organization extends Account {
         if($this->parentId != null){
         	throw new BadInputException("This organization is already a child of another organization with id ".$this->parentId);
         }
-        $parentObj_AllParents = null;
-        TransactionManager::executeInTransaction(function() use(&$parentObj_AllParents,$parentObj) {
-        	$parentObj_AllParents = $parentObj->getAllParents();
-        },array(),true);
-        $parentObj_AllParents[] = $parentObj;
-        foreach ($parentObj_AllParents as $parent){
-        	if($parent->getAttribute('id') == $this->id){
-        		throw new BadInputException("Circular child-parent connection");
-        	}
+        if($this->id == $parentObj->getAttribute('id')){
+        	throw new BadInputException('An Organization can not be a child its own');
         }
+        
+        if($this->isChild($parentObj)){
+        	throw new BadInputException("Circular child-parent connection");
+        }
+        
         parent::setAttributes(array("parentId"=>$parentId));
+    }
+    
+    private function isChild($child){
+    	$allParentsOfChild = null;
+    	TransactionManager::executeInTransaction(function() use(&$allParentsOfChild,$child) {
+    		$allParentsOfChild = $child->getAllParents();
+    	},array(),true);
+    	foreach ($allParentsOfChild as $parent){
+    		if($parent->getAttribute('id') == $this->id){
+    			return true;
+    		}
+    	}
+    	return false;
     }
 
     /**
@@ -230,8 +241,8 @@ class Organization extends Account {
      * @access ("person|systemAdmin","function|canEdit")
      */
     function addChildren($children){
-        if(!is_array($children)) throw new BadInputException("$children is not array");
-        if(!self::UpdateAccess()){ throw new NoAccessException('No access to add children');} // force the access check
+        if(!is_array($children)) throw new BadInputException("1st parameter is not an array");
+        self::checkAccess($this, 'UpdateAccess', 'No access to add children'); // force the access check
         try{
             TransactionManager::startTransaction();
             foreach($children as $child){
@@ -250,12 +261,12 @@ class Organization extends Account {
      * @access ("person|systemAdmin","function|canEdit")
      */
     function removeChildren($children){
-        if(!is_array($children)) throw new BadInputException("$children is not array");
-        if(!self::UpdateAccess()){ throw new NoAccessException('No access to remove children');} // force the access check
+        if(!is_array($children)) throw new BadInputException("1st parameter is not an array");
+        self::checkAccess($this, 'UpdateAccess', 'No access to remove children'); // force the access check
         try{
             TransactionManager::startTransaction();
             foreach($children as $child){
-                $child->removeFromParent();
+                $child->removeFromParent($this);
             }
             TransactionManager::commitTransaction();
         }catch (\Exception $e){
@@ -296,7 +307,7 @@ class Organization extends Account {
     function addPeople($people, $type = OrganizationPerson::TYPE_MEMBER){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
         if(!is_array($people)) throw new BadInputException("$people is not array");
-        if(!self::UpdateAccess()){ throw new NoAccessException('No access to add people');} // force the access check
+        self::checkAccess($this, 'UpdateAccess', 'No access to add people'); // force the access check
         try{
             TransactionManager::startTransaction(null,true);
             foreach($people as $person){
@@ -321,7 +332,7 @@ class Organization extends Account {
     function removePeople($people){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
         if(!is_array($people)) throw new BadInputException("$people is not array");
-        if(!self::UpdateAccess()){ throw new NoAccessException('No access to remove people');} // force the access check
+        self::checkAccess($this, 'UpdateAccess', 'No access to remove people'); // force the access check
         try{
             TransactionManager::startTransaction(null,true);
             foreach($people as $person){

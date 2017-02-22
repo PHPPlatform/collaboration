@@ -189,12 +189,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPPlatform/persist.git",
-                "reference": "8f2161cff3493b316d6a7293d6d566460b5b0ebe"
+                "reference": "b5f4825137441e3f25ab1bb37ebb1dbee6612adf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPPlatform/persist/zipball/8f2161cff3493b316d6a7293d6d566460b5b0ebe",
-                "reference": "8f2161cff3493b316d6a7293d6d566460b5b0ebe",
+                "url": "https://api.github.com/repos/PHPPlatform/persist/zipball/b5f4825137441e3f25ab1bb37ebb1dbee6612adf",
+                "reference": "b5f4825137441e3f25ab1bb37ebb1dbee6612adf",
                 "shasum": ""
             },
             "require": {
@@ -230,7 +230,7 @@
                 "php-platform",
                 "relational Schema"
             ],
-            "time": "2017-02-07 13:50:28"
+            "time": "2017-02-22 06:17:42"
         }
     ],
     "packages-dev": [
@@ -240,12 +240,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/instantiator.git",
-                "reference": "68099b02b60bbf3b088ff5cb67bf506770ef9cac"
+                "reference": "5acd2bd8c2b600ad5cc4c9180ebf0a930604d6a5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/instantiator/zipball/68099b02b60bbf3b088ff5cb67bf506770ef9cac",
-                "reference": "68099b02b60bbf3b088ff5cb67bf506770ef9cac",
+                "url": "https://api.github.com/repos/doctrine/instantiator/zipball/5acd2bd8c2b600ad5cc4c9180ebf0a930604d6a5",
+                "reference": "5acd2bd8c2b600ad5cc4c9180ebf0a930604d6a5",
                 "shasum": ""
             },
             "require": {
@@ -286,7 +286,7 @@
                 "constructor",
                 "instantiate"
             ],
-            "time": "2017-01-23 09:23:06"
+            "time": "2017-02-16 16:15:51"
         },
         {
             "name": "php-platform/mock-config",
@@ -1399,12 +1399,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/yaml.git",
-                "reference": "7928849b226f065dae93ec0e8be3b829f73ba67b"
+                "reference": "372979f85d2831630f12e794413902f07bce7031"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/yaml/zipball/7928849b226f065dae93ec0e8be3b829f73ba67b",
-                "reference": "7928849b226f065dae93ec0e8be3b829f73ba67b",
+                "url": "https://api.github.com/repos/symfony/yaml/zipball/372979f85d2831630f12e794413902f07bce7031",
+                "reference": "372979f85d2831630f12e794413902f07bce7031",
                 "shasum": ""
             },
             "require": {
@@ -1446,7 +1446,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "https://symfony.com",
-            "time": "2017-01-21 17:10:26"
+            "time": "2017-02-21 14:51:50"
         },
         {
             "name": "webmozart/assert",
