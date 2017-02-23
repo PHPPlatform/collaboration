@@ -315,11 +315,11 @@ class Organization extends Account {
     		foreach ($organizationPersonObjs as $organizationPersonObj){
     			$personId= $organizationPersonObj->getAttribute("personId");
     			$personIds[] = $personId;
-    			$type = $organizationPersonObj->getAttribute('type');
-    			if(!array_key_exists($type, $personIdsPerType)){
-    				$personIdsPerType[$type] = array();
+    			$_type = $organizationPersonObj->getAttribute('type');
+    			if(!array_key_exists($_type, $personIdsPerType)){
+    				$personIdsPerType[$_type] = array();
     			}
-    			$personIdsPerType[$type][] = $personId;
+    			$personIdsPerType[$_type][] = $personId;
     		}
     		TransactionManager::commitTransaction();
     	}catch (\Exception $e){
@@ -334,12 +334,12 @@ class Organization extends Account {
     	}
     	
     	$peopleAssociatedFromType = array();
-    	foreach ($personIdsPerType as $type=>$personIds){
-    		if(!array_key_exists($type, $peopleAssociatedFromType)){
-    			$peopleAssociatedFromType[$type] = array();
-    		}
+    	foreach ($type as $inputType){
+    		$peopleAssociatedFromType[$inputType] = array();
+    	}
+    	foreach ($personIdsPerType as $_type=>$personIds){
     		foreach ($personIds as $personId){
-    			$peopleAssociatedFromType[$type][] = $peopleAssociatedFromId[$personId];
+    			$peopleAssociatedFromType[$_type][] = $peopleAssociatedFromId[$personId];
     		}
     	}
     	
@@ -353,8 +353,25 @@ class Organization extends Account {
      */
     function addPeople($people, $type = OrganizationPerson::TYPE_MEMBER){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
-        if(!is_array($people)) throw new BadInputException("$people is not array");
+        if(!is_array($people)) throw new BadInputException("1st parameter is not an array");
         self::checkAccess($this, 'UpdateAccess', 'No access to add people'); // force the access check
+        
+        $allowedTypes = array(OrganizationPerson::TYPE_OWNER,OrganizationPerson::TYPE_ADMINISTRATOR,OrganizationPerson::TYPE_MEMBER);
+        if(!in_array($type, $allowedTypes)){
+        	throw new BadInputException("invalid type");
+        }
+        if($type == OrganizationPerson::TYPE_OWNER && !PersonSession::hasPerson('systemAdmin') && !TransactionManager::isSuperUser()){
+        	// to add owner , loggedin person must be a owner as well
+        	$sessionOwner = null;
+        	$thisOrgId = $this->id;
+        	TransactionManager::executeInTransaction(function() use (&$sessionOwner,$thisOrgId){
+        		$sessionOwner = OrganizationPerson::find(array("organizationId"=>$thisOrgId,"personId"=>PersonSession::getPersonId(),"type"=>OrganizationPerson::TYPE_OWNER));
+        	},array(),true);
+        	if(count($sessionOwner) != 1){
+        		throw new NoAccessException("To add owner , loggedin person must be a owner as well");
+        	}
+        }
+        
         try{
             TransactionManager::startTransaction(null,true);
             foreach($people as $person){
@@ -378,12 +395,24 @@ class Organization extends Account {
      */
     function removePeople($people){
     	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
-        if(!is_array($people)) throw new BadInputException("$people is not array");
+        if(!is_array($people)) throw new BadInputException("1st parameter is not an array");
         self::checkAccess($this, 'UpdateAccess', 'No access to remove people'); // force the access check
         try{
+        	$isSuperUserTransaction = TransactionManager::isSuperUser();
             TransactionManager::startTransaction(null,true);
             foreach($people as $person){
                 $organizationPerson = new OrganizationPerson($this->id,$person->getAttribute("id"));
+                if($organizationPerson->getAttribute('type') == OrganizationPerson::TYPE_OWNER && !PersonSession::hasPerson('systemAdmin') && !$isSuperUserTransaction){
+                	// to remove owner , loggedin person must be a owner as well
+                	$sessionOwner = null;
+                	$thisOrgId = $this->id;
+                	TransactionManager::executeInTransaction(function() use (&$sessionOwner,$thisOrgId){
+                		$sessionOwner = OrganizationPerson::find(array("organizationId"=>$thisOrgId,"personId"=>PersonSession::getPersonId(),"type"=>OrganizationPerson::TYPE_OWNER));
+                	},array(),true);
+                	if(count($sessionOwner) != 1){
+                		throw new NoAccessException("To remove owner , loggedin person must be a owner as well");
+                	}
+                }
                 $organizationPerson->delete();
             }
             TransactionManager::commitTransaction();

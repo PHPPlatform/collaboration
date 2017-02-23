@@ -689,6 +689,9 @@ class TestOrganization extends TestBase {
 	}
 	
 	function testGetPeople(){
+		/**
+		 * data
+		 */
 		$orgOwner  = $this->orgOwner;
 		$orgAdmin  = $this->orgAdmin;
 		$orgMember = $this->orgMember;
@@ -809,6 +812,257 @@ class TestOrganization extends TestBase {
 		
 	}
 	
+	
+	function testAddRemovePeople(){
+		/**
+		 * data
+		 */
+		$orgOwner  = $this->orgOwner;
+		$orgAdmin  = $this->orgAdmin;
+		$orgMember = $this->orgMember;
+		
+		$testPerson1 = $testPerson2 = $testPerson3 = $noneOrgOwner = null;
+		
+		$ownOrg = $adminOrg = $memberOrg = $noneOrg = null;
+		
+		TransactionManager::executeInTransaction(function()
+				use($orgOwner,$orgAdmin,$orgMember,&$ownOrg,&$adminOrg,&$memberOrg,&$noneOrg,&$testPerson1,&$testPerson2,&$testPerson3,&$noneOrgOwner){
+					$ownOrg    = Organization::create(array('name'=>"My Org 1",'accountName'=>'myOrg1'));
+					OrganizationPerson::create(array("organizationId"=>$ownOrg->getAttribute('id'),"personId"=>$orgOwner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_OWNER));
+						
+					$adminOrg  = Organization::create(array('name'=>"My Org 2",'accountName'=>'myOrg2'));
+					OrganizationPerson::create(array("organizationId"=>$adminOrg->getAttribute('id'),"personId"=>$orgOwner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_ADMINISTRATOR));
+					
+					$memberOrg = Organization::create(array('name'=>"My Org 3",'accountName'=>'myOrg3'));
+					OrganizationPerson::create(array("organizationId"=>$memberOrg->getAttribute('id'),"personId"=>$orgOwner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_MEMBER));
+					
+					$noneOrg   = Organization::create(array('name'=>"My Org 4",'accountName'=>'myOrg4'));
+					$noneOrgOwner = Person::create(array("accountName"=>"noneOrgOwner","firstName"=>"noneOrg Owner"));
+					OrganizationPerson::create(array("organizationId"=>$noneOrg->getAttribute('id'),"personId"=>$noneOrgOwner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_OWNER));
+					
+					$testPerson1 = Person::create(array("accountName"=>"testPerson1","firstName"=>"testPerson1"));
+					$testPerson2 = Person::create(array("accountName"=>"testPerson2","firstName"=>"testPerson2"));
+					$testPerson3 = Person::create(array("accountName"=>"testPerson3","firstName"=>"testPerson3"));
+					
+					
+		},array(),true);
+		
+		$this->login('orgOwner1','orgOwner1');
+		
+		// + add owner to own org
+		$ownOrg->addPeople(array($testPerson1),OrganizationPerson::TYPE_OWNER);
+		$ownOrgOwners = $ownOrg->getPeople(OrganizationPerson::TYPE_OWNER);
+		parent::assertCount(2, $ownOrgOwners[OrganizationPerson::TYPE_OWNER]);
+		
+		// - remove owner from own org 
+		$ownOrg->removePeople(array($testPerson1));
+		$ownOrgOwners = $ownOrg->getPeople(OrganizationPerson::TYPE_OWNER);
+		parent::assertCount(1, $ownOrgOwners[OrganizationPerson::TYPE_OWNER]);
+		
+		// + add admin to own org
+		$ownOrg->addPeople(array($orgAdmin),OrganizationPerson::TYPE_ADMINISTRATOR);
+		$ownOrgAdmins = $ownOrg->getPeople(OrganizationPerson::TYPE_ADMINISTRATOR);
+		parent::assertCount(1, $ownOrgAdmins[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		
+		// - remove admin from own org
+		$ownOrg->removePeople(array($orgAdmin));
+		$ownOrgAdmins = $ownOrg->getPeople(OrganizationPerson::TYPE_ADMINISTRATOR);
+		parent::assertCount(0, $ownOrgAdmins[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		
+		// + add member to own org
+		$ownOrg->addPeople(array($orgMember));
+		$ownOrgMembers = $ownOrg->getPeople(OrganizationPerson::TYPE_MEMBER);
+		parent::assertCount(1, $ownOrgMembers[OrganizationPerson::TYPE_MEMBER]);
+
+		// - remove member from own org
+		$ownOrg->removePeople(array($orgMember));
+		$ownOrgMembers = $ownOrg->getPeople(OrganizationPerson::TYPE_MEMBER);
+		parent::assertCount(0, $ownOrgMembers[OrganizationPerson::TYPE_MEMBER]);
+		
+		// add member to own org, by default 
+		$ownOrg->addPeople(array($testPerson2));
+		$ownOrgMembers = $ownOrg->getPeople(OrganizationPerson::TYPE_MEMBER);
+		parent::assertCount(1, $ownOrgMembers[OrganizationPerson::TYPE_MEMBER]);
+		
+		// ----------------------------------------------------------
+		
+		// + add owner to admin org
+		$isException = false;
+		try{
+			$adminOrg->addPeople(array($testPerson1),OrganizationPerson::TYPE_OWNER);
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+			parent::assertEquals("To add owner , loggedin person must be a owner as well", $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		$adminOrgOwners = $adminOrg->getPeople(OrganizationPerson::TYPE_OWNER);
+		parent::assertCount(0, $adminOrgOwners[OrganizationPerson::TYPE_OWNER]);
+		
+		// + remove owner from admin org
+		TransactionManager::executeInTransaction(function() use ($adminOrg,$testPerson1){
+			$adminOrg->addPeople(array($testPerson1),OrganizationPerson::TYPE_OWNER);
+		},array(),true);
+		$isException = false;
+		try{
+			$adminOrg->removePeople(array($testPerson1));
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+			parent::assertEquals("To remove owner , loggedin person must be a owner as well", $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		$adminOrgOwners = $adminOrg->getPeople(OrganizationPerson::TYPE_OWNER);
+		parent::assertCount(1, $adminOrgOwners[OrganizationPerson::TYPE_OWNER]);
+		
+		// + add admin to admin org
+		$adminOrg->addPeople(array($testPerson2),OrganizationPerson::TYPE_ADMINISTRATOR);
+		$adminOrgAdmins = $adminOrg->getPeople(OrganizationPerson::TYPE_ADMINISTRATOR);
+		parent::assertCount(2, $adminOrgAdmins[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		
+		// + remove admin from admin org
+		$adminOrg->removePeople(array($testPerson2));
+		$adminOrgAdmins = $adminOrg->getPeople(OrganizationPerson::TYPE_ADMINISTRATOR);
+		parent::assertCount(1, $adminOrgAdmins[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		
+		// + add member to admin org
+		$adminOrg->addPeople(array($orgMember),OrganizationPerson::TYPE_MEMBER);
+		$adminOrgMembers = $adminOrg->getPeople(OrganizationPerson::TYPE_MEMBER);
+		parent::assertCount(1, $adminOrgMembers[OrganizationPerson::TYPE_MEMBER]);
+		
+		// - remove member from admin org
+		$adminOrg->removePeople(array($orgMember));
+		$adminOrgMembers = $adminOrg->getPeople(OrganizationPerson::TYPE_MEMBER);
+		parent::assertCount(0, $adminOrgMembers[OrganizationPerson::TYPE_MEMBER]);
+		
+		// ----------------------------------------------------------
+		
+		// + add owner to member org
+		$isException = false;
+		try{
+			$memberOrg->addPeople(array($testPerson1),OrganizationPerson::TYPE_OWNER);
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		$memberOrgOwners = $memberOrg->getPeople(OrganizationPerson::TYPE_OWNER);
+		parent::assertCount(0, $memberOrgOwners[OrganizationPerson::TYPE_OWNER]);
+		
+		// + remove owner from member org
+		TransactionManager::executeInTransaction(function() use ($memberOrg,$testPerson1){
+			$memberOrg->addPeople(array($testPerson1),OrganizationPerson::TYPE_OWNER);
+		},array(),true);
+		$isException = false;
+		try{
+			$memberOrg->removePeople(array($testPerson1));
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		$memberOrgOwners = $memberOrg->getPeople(OrganizationPerson::TYPE_OWNER);
+		parent::assertCount(1, $memberOrgOwners[OrganizationPerson::TYPE_OWNER]);
+		
+		
+		// + add admin to member org
+		$isException = false;
+		try{
+			$memberOrg->addPeople(array($testPerson1),OrganizationPerson::TYPE_ADMINISTRATOR);
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		$memberOrgAdmins = $memberOrg->getPeople(OrganizationPerson::TYPE_ADMINISTRATOR);
+		parent::assertCount(0, $memberOrgAdmins[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		
+		// - remove admin from member org
+		TransactionManager::executeInTransaction(function() use ($memberOrg,$testPerson2){
+			$memberOrg->addPeople(array($testPerson2),OrganizationPerson::TYPE_ADMINISTRATOR);
+		},array(),true);
+		$isException = false;
+		try{
+			$memberOrg->removePeople(array($testPerson2));
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		$memberOrgAdmins = $memberOrg->getPeople(OrganizationPerson::TYPE_ADMINISTRATOR);
+		parent::assertCount(1, $memberOrgAdmins[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		
+		// + add member to member org
+		$isException = false;
+		try{
+			$memberOrg->addPeople(array($testPerson1),OrganizationPerson::TYPE_MEMBER);
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		$memberOrgMembers = $memberOrg->getPeople(OrganizationPerson::TYPE_MEMBER);
+		parent::assertCount(1, $memberOrgMembers[OrganizationPerson::TYPE_MEMBER]);
+		
+		// - remove member from member org
+		TransactionManager::executeInTransaction(function() use ($memberOrg,$testPerson3){
+			$memberOrg->addPeople(array($testPerson3));
+		},array(),true);
+		$isException = false;
+		try{
+			$memberOrg->removePeople(array($testPerson3));
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		$memberOrgMembers = $memberOrg->getPeople(OrganizationPerson::TYPE_MEMBER);
+		parent::assertCount(2, $memberOrgMembers[OrganizationPerson::TYPE_MEMBER]);
+		
+		
+		// ----------------------------------------------------------
+		
+		// add owner to none org
+		$isException = false;
+		try{
+			$noneOrg->addPeople(array($testPerson1),OrganizationPerson::TYPE_OWNER);
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// add admin to none org
+		$isException = false;
+		try{
+			$noneOrg->addPeople(array($testPerson1),OrganizationPerson::TYPE_ADMINISTRATOR);
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// add member to none org
+		$isException = false;
+		try{
+			$noneOrg->addPeople(array($testPerson1),OrganizationPerson::TYPE_MEMBER);
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// remove from none org
+		$isException = false;
+		try{
+			$noneOrg->removePeople(array($noneOrgOwner));
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// --------------------------------------------------------------------------------
+		
+		// invalid input
+		$isException = false;
+		try{
+			$ownOrg->addPeople($testPerson3,OrganizationPerson::TYPE_MEMBER);
+		}catch (BadInputException $e){
+			$isException = true;
+			parent::assertEquals("1st parameter is not an array", $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+	}
 	
 	
 	
