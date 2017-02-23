@@ -402,7 +402,8 @@ class Person extends Account {
     		$sessionOrgIds = array_map(function($sessionOrgObj){return $sessionOrgObj->getAttribute('id');}, $sessionOrgObjs);
     		$sessionOrgPersonObjs = OrganizationPerson::find(array("id"=>array(self::OPERATOR_IN=>$sessionOrgIds)));
     		if(count($sessionOrgPersonObjs) > 0){
-    			$sessionOrgPersonIds = array_map(function($sessionOrgPersonObj){$sessionOrgPersonObj->getAttribute('personId');}, $sessionOrgPersonObjs);
+    			$sessionOrgPersonIds = array_map(function($sessionOrgPersonObj){return $sessionOrgPersonObj->getAttribute('personId');}, $sessionOrgPersonObjs);
+    			$sessionOrgPersonIds = array_unique($sessionOrgPersonIds);
     			$sessionOrgPersonIdsStr = "'".implode("','", $sessionOrgPersonIds)."'";
     			$personIdExpr = "{".get_class()."."."id"."}";
     			$readExpr = "($readExpr) OR $personIdExpr in ($sessionOrgPersonIdsStr)";

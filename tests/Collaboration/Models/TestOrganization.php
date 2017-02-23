@@ -688,6 +688,127 @@ class TestOrganization extends TestBase {
 		},array(),true);
 	}
 	
+	function testGetPeople(){
+		$orgOwner  = $this->orgOwner;
+		$orgAdmin  = $this->orgAdmin;
+		$orgMember = $this->orgMember;
+		
+		$ownOrg = $adminOrg = $memberOrg = $noneOrg = null;
+		
+		TransactionManager::executeInTransaction(function()
+				use($orgOwner,$orgAdmin,$orgMember,&$ownOrg,&$adminOrg,&$memberOrg,&$noneOrg){
+					$ownOrg    = Organization::create(array('name'=>"My Org 1",'accountName'=>'myOrg1'));
+					OrganizationPerson::create(array("organizationId"=>$ownOrg->getAttribute('id'),"personId"=>$orgOwner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_OWNER));
+					OrganizationPerson::create(array("organizationId"=>$ownOrg->getAttribute('id'),"personId"=>$orgAdmin->getAttribute('id'),"type"=>OrganizationPerson::TYPE_ADMINISTRATOR));
+					OrganizationPerson::create(array("organizationId"=>$ownOrg->getAttribute('id'),"personId"=>$orgMember->getAttribute('id'),"type"=>OrganizationPerson::TYPE_MEMBER));
+					
+					$adminOrg  = Organization::create(array('name'=>"My Org 2",'accountName'=>'myOrg2'));
+					OrganizationPerson::create(array("organizationId"=>$adminOrg->getAttribute('id'),"personId"=>$orgOwner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_ADMINISTRATOR));
+					OrganizationPerson::create(array("organizationId"=>$adminOrg->getAttribute('id'),"personId"=>$orgAdmin->getAttribute('id'),"type"=>OrganizationPerson::TYPE_OWNER));
+					OrganizationPerson::create(array("organizationId"=>$adminOrg->getAttribute('id'),"personId"=>$orgMember->getAttribute('id'),"type"=>OrganizationPerson::TYPE_MEMBER));
+						
+					$memberOrg = Organization::create(array('name'=>"My Org 3",'accountName'=>'myOrg3'));
+					OrganizationPerson::create(array("organizationId"=>$memberOrg->getAttribute('id'),"personId"=>$orgOwner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_MEMBER));
+					OrganizationPerson::create(array("organizationId"=>$memberOrg->getAttribute('id'),"personId"=>$orgAdmin->getAttribute('id'),"type"=>OrganizationPerson::TYPE_OWNER));
+					OrganizationPerson::create(array("organizationId"=>$memberOrg->getAttribute('id'),"personId"=>$orgMember->getAttribute('id'),"type"=>OrganizationPerson::TYPE_ADMINISTRATOR));
+						
+					$noneOrg   = Organization::create(array('name'=>"My Org 4",'accountName'=>'myOrg4'));
+					$noneOrgOwner = Person::create(array("accountName"=>"noneOrgOwner","firstName"=>"noneOrg Owner"));
+					OrganizationPerson::create(array("organizationId"=>$noneOrg->getAttribute('id'),"personId"=>$noneOrgOwner->getAttribute('id'),"type"=>OrganizationPerson::TYPE_OWNER));
+					OrganizationPerson::create(array("organizationId"=>$noneOrg->getAttribute('id'),"personId"=>$orgAdmin->getAttribute('id'),"type"=>OrganizationPerson::TYPE_ADMINISTRATOR));
+					OrganizationPerson::create(array("organizationId"=>$noneOrg->getAttribute('id'),"personId"=>$orgMember->getAttribute('id'),"type"=>OrganizationPerson::TYPE_MEMBER));
+		},array(),true);
+		
+		$this->login('orgOwner1','orgOwner1');
+		
+		// from own organization
+		$ownOrgPeople = $ownOrg->getPeople();
+		parent::assertCount(3, $ownOrgPeople);
+		parent::assertCount(1, $ownOrgPeople[OrganizationPerson::TYPE_OWNER]);
+		parent::assertCount(1, $ownOrgPeople[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		parent::assertCount(1, $ownOrgPeople[OrganizationPerson::TYPE_MEMBER]);
+		
+		$ownOrgPeople = $ownOrg->getPeople(OrganizationPerson::TYPE_OWNER);
+		parent::assertCount(1, $ownOrgPeople[OrganizationPerson::TYPE_OWNER]);
+		parent::assertEquals($orgOwner->getAttribute('accountName'), $ownOrgPeople[OrganizationPerson::TYPE_OWNER][0]->getAttribute('accountName'));
+		
+		$ownOrgPeople = $ownOrg->getPeople(array(OrganizationPerson::TYPE_OWNER,OrganizationPerson::TYPE_ADMINISTRATOR));
+		parent::assertCount(2, $ownOrgPeople);
+		parent::assertCount(1, $ownOrgPeople[OrganizationPerson::TYPE_OWNER]);
+		parent::assertCount(1, $ownOrgPeople[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		parent::assertEquals($orgOwner->getAttribute('accountName'), $ownOrgPeople[OrganizationPerson::TYPE_OWNER][0]->getAttribute('accountName'));
+		parent::assertEquals($orgAdmin->getAttribute('accountName'), $ownOrgPeople[OrganizationPerson::TYPE_ADMINISTRATOR][0]->getAttribute('accountName'));
+		
+		// from admin organization
+		$adminOrgPeople = $adminOrg->getPeople();
+		parent::assertCount(3, $adminOrgPeople);
+		parent::assertCount(1, $adminOrgPeople[OrganizationPerson::TYPE_OWNER]);
+		parent::assertCount(1, $adminOrgPeople[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		parent::assertCount(1, $adminOrgPeople[OrganizationPerson::TYPE_MEMBER]);
+		
+		// from member organization
+		$memberOrgPeople = $memberOrg->getPeople();
+		parent::assertCount(3, $memberOrgPeople);
+		parent::assertCount(1, $memberOrgPeople[OrganizationPerson::TYPE_OWNER]);
+		parent::assertCount(1, $memberOrgPeople[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		parent::assertCount(1, $memberOrgPeople[OrganizationPerson::TYPE_MEMBER]);
+		
+		// from an organization to which the logged in user is not connected with
+		$isException = false;
+		try{
+			$noneOrg->getPeople();
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+			parent::assertEquals("No Access to get people from this organization", $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+		$isException = false;
+		try{
+			TransactionManager::startTransaction(null,true);
+			$noneOrgPeople = $noneOrg->getPeople();
+			TransactionManager::commitTransaction();
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			TransactionManager::abortTransaction();
+			$isException = true;
+			parent::assertEquals("No Access to get people from this organization", $e->getMessage());
+		}
+		parent::assertTrue(!$isException);
+		parent::assertCount(3, $noneOrgPeople);
+		parent::assertCount(1, $noneOrgPeople[OrganizationPerson::TYPE_OWNER]);
+		parent::assertCount(1, $noneOrgPeople[OrganizationPerson::TYPE_ADMINISTRATOR]);
+		parent::assertCount(1, $noneOrgPeople[OrganizationPerson::TYPE_MEMBER]);
+		
+		// invalid input parameters
+		$isException = false;
+		try{
+			$ownOrg->getPeople(123);
+		}catch (BadInputException $e){
+			$isException = true;
+			parent::assertEquals("1st parameter is not an array or string", $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+		$isException = false;
+		try{
+			$ownOrg->getPeople("abcd");
+		}catch (BadInputException $e){
+			$isException = true;
+			parent::assertEquals("1st parameter contains invalid type", $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+		$isException = false;
+		try{
+			$ownOrg->getPeople(array(OrganizationPerson::TYPE_OWNER,"abcd"));
+		}catch (BadInputException $e){
+			$isException = true;
+			parent::assertEquals("1st parameter contains invalid type", $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+	}
+	
 	
 	
 	

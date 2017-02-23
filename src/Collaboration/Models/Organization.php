@@ -6,6 +6,7 @@
 namespace PhpPlatform\Collaboration\Models;
 
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
+use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Persist\Exception\ObjectStateException;
 use PhpPlatform\Collaboration\Util\PersonSession;
@@ -291,14 +292,24 @@ class Organization extends Account {
     		$type = array($type);
     	}
     	if(!is_array($type)){
-    		throw new BadInputException("1st parameter is not an array");
+    		throw new BadInputException("1st parameter is not an array or string");
     	}
     	if(count(array_diff($type, $allowedTypes)) > 0){
     		throw new BadInputException("1st parameter contains invalid type");
     	}
     	$personIdsPerType = array();
     	try{
+    		$isSuperUserTransaction = TransactionManager::isSuperUser();
+    		
     		TransactionManager::startTransaction(null,true);
+    		$sessionPersonId = PersonSession::getPersonId();
+
+    		if(!PersonSession::hasPerson('systemAdmin') && !$isSuperUserTransaction){
+    			$organizationPersonObjsForSessionPerson = OrganizationPerson::find(array("organizationId"=>$this->id,"personId"=>array(self::OPERATOR_EQUAL=>$sessionPersonId)));
+    			if(count($organizationPersonObjsForSessionPerson) != 1 ){
+    				throw new NoAccessException("No Access to get people from this organization");
+    			}
+    		}
     		$organizationPersonObjs = OrganizationPerson::find(array("organizationId"=>$this->id,"type"=>array(self::OPERATOR_IN=>$type)));
     		$personIds = array();
     		foreach ($organizationPersonObjs as $organizationPersonObj){
