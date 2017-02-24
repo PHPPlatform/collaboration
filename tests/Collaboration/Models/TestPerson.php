@@ -214,7 +214,186 @@ class TestPerson extends TestBase {
 	}
 	
 	function testUpdate(){
+		// update without session
 		
+		$isException = false;
+		try{
+			$this->personCreator->setAttribute('lastName', 'creator');
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// update with systemAdmin session
+		$this->setSystemAdminSession();
+		$isException = false;
+		try{
+			$this->personCreator->setAttribute('lastName', 'creator');
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		parent::assertEquals('creator',$this->personCreator->getAttribute('lastName'));
+		
+		// update personCreator with person creator session
+		$this->login('personCreator1', 'personCreator1');
+		$isException = false;
+		try{
+			$this->personCreator->setAttribute('middleName', 'mid-name');
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		parent::assertEquals('mid-name',$this->personCreator->getAttribute('middleName'));
+		
+		// update personForTest with person creator session
+		$isException = false;
+		try{
+			$this->personForTest->setAttribute('lastName', 'test');
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// create an organization and add personForTest
+		$organization = Organization::create(array("accountName"=>"myOrg1","name"=>"My Org 1"));
+		$organization->addPeople(array($this->personForTest));
+		
+		// update personForTest with person creator session + in own organization
+		$this->login('personCreator1', 'personCreator1');
+		$isException = false;
+		try{
+			$this->personForTest->setAttribute('lastName', 'test');
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// create person 
+		$person1 = Person::create(array('firstName'=>"test Person 1",'accountName'=>'testPerson1'));
+		
+		// edit created person 
+		$person1->setAttribute('lastName', 'Last-name');
+		parent::assertEquals('Last-name', $person1->getAttribute('lastName'));
+		
+	}
+	
+	function testDelete(){
+		// delete without session
+		$isException = false;
+		try{
+			$this->personForTest->delete();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// delete from other's session
+		$this->login('personCreator1', 'personCreator1');
+		$isException = false;
+		try{
+			$this->personForTest->delete();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// delete in his own session
+		$this->login('personForTest1', 'personForTest1');
+		$isException = false;
+		try{
+			$this->personForTest->delete();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue(!$isException);
+		
+		$this->login('personCreator1', 'personCreator1');
+		// create an organization and add people
+		$organization = Organization::create(array("accountName"=>"myOrg1","name"=>"My Org 1"));
+		$person1 = Person::create(array('firstName'=>"test Person 1",'accountName'=>'testPerson1'));
+		$organization->addPeople(array($person1));
+		$person2 = Person::create(array('firstName'=>"test Person 2",'accountName'=>'testPerson2'));
+		
+		//logout and create people and add to organization
+		$this->login();
+		$person3 = $person4 = null;
+		TransactionManager::executeInTransaction(function() use(&$person3,&$person4,$organization){
+			$person3 = Person::create(array('firstName'=>"test Person 3",'accountName'=>'testPerson3'));
+			$organization->addPeople(array($person3));
+			$person4 = Person::create(array('firstName'=>"test Person 4",'accountName'=>'testPerson4'));
+		},array(),true);
+		
+		$this->login('personCreator1', 'personCreator1');
+		
+		// delete created person in own organization
+		$person1->delete();
+		
+		// delete created person not in own organization
+		$person2->delete();
+		
+		// delete not created person in own organization
+		$isException = false;
+		try{
+			$person3->delete();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// delete all in systemAdmin Session
+		$this->setSystemAdminSession();
+		$person3->delete();
+		$person4->delete();
+
+	}
+	
+	function testGetOrganizations(){
+		// without session
+		$isException = false;
+		try{
+			$organizations = $this->personCreator->getOrganizations();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		$this->login('personCreator1', 'personCreator1');
+		
+		// with session
+		$organizations = $this->personCreator->getOrganizations();
+		parent::assertCount(0, $organizations);
+		
+		// create organization and add people
+		$organization = Organization::create(array("accountName"=>"myOrg1","name"=>"My Org 1"));
+		$organization->addPeople(array($this->personForTest));
+		
+		$organizations = $this->personCreator->getOrganizations();
+		parent::assertCount(1, $organizations);
+		parent::assertEquals($organization->getAttribute("name"), $organizations[0]->getAttribute("name"));
+		
+		$organizations = $this->personForTest->getOrganizations();
+		parent::assertCount(1, $organizations);
+		parent::assertEquals($organization->getAttribute("name"), $organizations[0]->getAttribute("name"));
+		
+		//logout and create organization and add personForTest to it
+		$this->login();
+		$organization2 = null;
+		$personForTest = $this->personForTest;
+		TransactionManager::executeInTransaction(function() use(&$organization2,$personForTest){
+			$organization2 = Organization::create(array("accountName"=>"myOrg2","name"=>"My Org 2"));
+			$organization2->addPeople(array($personForTest));
+		},array(),true);
+		
+		// get organizations that loggedin person belongs 
+		$this->login('personCreator1', 'personCreator1');
+		$organizations = $this->personForTest->getOrganizations();
+		parent::assertCount(1, $organizations);
+		parent::assertEquals($organization->getAttribute("name"), $organizations[0]->getAttribute("name"));
+		
+		$this->login('personForTest1', 'personForTest1');
+		$organizations = $this->personForTest->getOrganizations();
+		parent::assertCount(2, $organizations);
 	}
 	
 	
