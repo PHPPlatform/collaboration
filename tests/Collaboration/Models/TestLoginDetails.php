@@ -1,6 +1,6 @@
 <?php
 
-namespace PHPPlatform\Tests\Collaboration\Models;
+namespace PhpPlatform\Tests\Collaboration\Models;
 
 use PhpPlatform\Tests\Collaboration\TestBase;
 use PhpPlatform\Collaboration\Models\LoginDetails;

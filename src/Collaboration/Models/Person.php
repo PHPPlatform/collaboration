@@ -411,25 +411,6 @@ class Person extends Account {
     	}
     	return $readExpr;
     }
-    
-    protected function canEdit($args){
-    	$canEdit = parent::canEdit($args);
-    	if(!$canEdit && PersonSession::hasRole('personEditor')){
-    		$belongingOrgs = PersonSession::getPersons();
-    		$canEdit = in_array($this->getAttribute('accountName'), $belongingOrgs);
-    	}
-    	return $canEdit;
-    }
-    
-    protected function canDelete(){
-    	$canDelete = parent::canDelete();
-    	if(!$canDelete && PersonSession::hasRole('personEraser')){
-    		$belongingOrgs = PersonSession::getPersons();
-    		$canDelete = in_array($this->getAttribute('accountName'), $belongingOrgs);
-    	}
-    	return $canDelete;
-    }
-    
 
 }
 
