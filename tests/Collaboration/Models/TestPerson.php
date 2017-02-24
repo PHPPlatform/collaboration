@@ -10,6 +10,7 @@ use PhpPlatform\Collaboration\Models\LoginDetails;
 use PhpPlatform\Persist\Reflection;
 use PhpPlatform\Collaboration\Models\Role;
 use PhpPlatform\Collaboration\Models\Organization;
+use PhpPlatform\Collaboration\Models\ComposedRoles;
 
 class TestPerson extends TestBase {
 	
@@ -25,7 +26,7 @@ class TestPerson extends TestBase {
 			$personCreator = Person::create(array("accountName"=>"personCreator1","firstName"=>"person Creator"));
 			$loginDetails = LoginDetails::create(array("personId"=>$personCreator->getAttribute('id'),"loginName"=>"personCreator1","password"=>"personCreator1"));
 			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_ACTIVE)));
-			$personCreator->addRoles(array(new Role(null,'personCreator'),new Role(null,'orgCreator')));
+			$personCreator->addRoles(array(new Role(null,'personCreator'),new Role(null,'orgCreator'),new Role(null,'roleCreator')));
 				
 			$personForTest = Person::create(array("accountName"=>"personForTest","firstName"=>"person For Test"));
 			$loginDetails = LoginDetails::create(array("personId"=>$personForTest->getAttribute('id'),"loginName"=>"personForTest1","password"=>"personForTest1"));
@@ -396,5 +397,139 @@ class TestPerson extends TestBase {
 		parent::assertCount(2, $organizations);
 	}
 	
+	function testGetRoles(){
+		/**
+		 * data
+		 */
+		$role1 = $role2 = $role3 = $role4 = null;
+		$personCreator = $this->personCreator;
+		$personForTest = $this->personForTest;
+		
+		TransactionManager::executeInTransaction(function() use(&$role1,&$role2,&$role3,&$role4,$personCreator,$personForTest){
+			$role1 = Role::create(array("accountName"=>"role1","name"=>"Role 1"));
+			$role2 = Role::create(array("accountName"=>"role2","name"=>"Role 2"));
+			$role3 = Role::create(array("accountName"=>"role3","name"=>"Role 3"));
+			$role4 = Role::create(array("accountName"=>"role4","name"=>"Role 4"));
+				
+			ComposedRoles::create(array("roleId"=>$role1->getAttribute('id'),"composedRoleId"=>$role2->getAttribute('id')));
+			ComposedRoles::create(array("roleId"=>$role2->getAttribute('id'),"composedRoleId"=>$role3->getAttribute('id')));
+			ComposedRoles::create(array("roleId"=>$role2->getAttribute('id'),"composedRoleId"=>$role4->getAttribute('id')));
+			
+			$personCreator->addRoles(array($role1));
+			$personForTest->addRoles(array($role2));
+			
+		},array(),true);
+		
+		// without session
+		$isException = false;
+		try{
+			$roles = $this->personCreator->getRoles();
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		$this->login('personCreator1', 'personCreator1');
+		
+		$roles = $this->personCreator->getRoles(); // personCreator, orgCreator, roleCreator, role1
+		parent::assertCount(3, $roles);
+		$roleNames = array_map(function($role){return $role->getAttribute('accountName');},$roles);
+		parent::assertEquals(array('personCreator', 'orgCreator', 'roleCreator', 'role1'), $roleNames);
+		
+		$roles = $this->personCreator->getRoles(true); // personCreator, orgCreator, role1, role2, role3, role4
+		parent::assertCount(6, $roles);
+		$roleNames = array_map(function($role){return $role->getAttribute('accountName');},$roles);
+		parent::assertEquals(array('personCreator','orgCreator', 'roleCreator', 'role1','role2','role3','role4'), $roleNames);
+		
+		$this->login('personForTest1', 'personForTest1');
+		
+		$roles = $this->personForTest->getRoles(); // role2
+		parent::assertCount(1, $roles);
+		$roleNames = array_map(function($role){return $role->getAttribute('accountName');},$roles);
+		parent::assertEquals(array('role2'), $roleNames);
+		
+		$roles = $this->personForTest->getRoles(true); // role2, role3, role4
+		parent::assertCount(3, $roles);
+		$roleNames = array_map(function($role){return $role->getAttribute('accountName');},$roles);
+		parent::assertEquals(array('role2','role3','role4'), $roleNames);
+	}
+	
+	function testAddRemoveRole(){
+		/**
+		 * data
+		 */
+		$role1 = $role2 = $role3 = $role4 = null;
+		$role_RoleCreator = null;
+		$this->login('personCreator1','personCreator1');
+		$role1 = Role::create(array("accountName"=>"role1","name"=>"Role 1"));
+		
+		$this->login();	
+		TransactionManager::executeInTransaction(function() use($role1,&$role2,&$role3,&$role4,&$role_RoleCreator){
+			$role2 = Role::create(array("accountName"=>"role2","name"=>"Role 2"));
+			$role3 = Role::create(array("accountName"=>"role3","name"=>"Role 3"));
+			$role4 = Role::create(array("accountName"=>"role4","name"=>"Role 4"));
+		
+			ComposedRoles::create(array("roleId"=>$role1->getAttribute('id'),"composedRoleId"=>$role2->getAttribute('id')));
+			ComposedRoles::create(array("roleId"=>$role2->getAttribute('id'),"composedRoleId"=>$role3->getAttribute('id')));
+			ComposedRoles::create(array("roleId"=>$role2->getAttribute('id'),"composedRoleId"=>$role4->getAttribute('id')));
+			
+			$role_RoleCreator = new Role(null,'roleCreator');
+				
+		},array(),true);
+		
+		
+		// with out session
+		// + add role
+		$isException = false;
+		try{
+			$this->personCreator->addRoles(array($role1));
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// + remove role
+		$isException = false;
+		try{
+			$this->personCreator->removeRoles(array($role_RoleCreator));
+		}catch (NoAccessException $e){
+			$isException = true;
+		}
+		parent::assertTrue($isException);
+		
+		// with session
+		$this->login('personCreator1','personCreator1');
+		
+		// + add own role
+		$this->personCreator->addRoles(array($role1));
+		parent::assertCount(4, $this->personCreator->getRoles());
+		
+		// - remove own role
+		$this->personCreator->removeRoles(array($role1));
+		parent::assertCount(3, $this->personCreator->getRoles());
+		
+		// + add other role
+		$isException = false;
+		try{
+			$this->personCreator->addRoles(array($role2));
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+			parent::assertEquals('No access to add role '.$role2->getAttribute('accountName'), $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		parent::assertCount(3, $this->personCreator->getRoles());
+		
+		// - remove other role
+		$isException = false;
+		try{
+			$this->personCreator->removeRoles(array($role_RoleCreator));
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+			parent::assertEquals('No access to remove role '.$role_RoleCreator->getAttribute('accountName'), $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		parent::assertCount(3, $this->personCreator->getRoles());
+		
+	}
 	
 }

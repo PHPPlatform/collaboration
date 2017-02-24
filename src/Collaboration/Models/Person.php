@@ -13,6 +13,7 @@ use PhpPlatform\Collaboration\Session;
 use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 use PhpPlatform\Errors\Exceptions\Application\ProgrammingError;
 use PhpPlatform\Collaboration\Util\PersonSession;
+use PhpPlatform\Errors\Exceptions\Application\ApplicationException;
 
 /**
  * @tableName person
@@ -143,7 +144,6 @@ class Person extends Account {
      * @return Organization[]
      */
     function getOrganizations(){
-    	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
     	try{
     		TransactionManager::startTransaction(null,true);
     		$organizationPersonObjs = OrganizationPerson::find(array("personId"=>$this->id));
@@ -167,7 +167,6 @@ class Person extends Account {
      * @return Role[]
      */
     function getRoles($includeComposed = false){
-    	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
     	try{
     		TransactionManager::startTransaction(null,true);
     		$personRoleObjs = PersonRole::find(array("personId"=>$this->id));
@@ -192,13 +191,18 @@ class Person extends Account {
      * @access ("person|systemAdmin","function|canEdit")
      */
     function addRoles($roles){
-    	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
-    	if(!is_array($roles)) throw new BadInputException("$roles is not array");
-    	if(!self::UpdateAccess()){ throw new NoAccessException('No access to add roles');} // force the access check
-    	
+    	if(!is_array($roles)) throw new BadInputException("1st parameter is not an array");
+    	$this->checkAccess($this, 'UpdateAccess', 'No access to add roles'); // force the access check
     	try{
+    		$isSuperUserTransaction = TransactionManager::isSuperUser();
     		TransactionManager::startTransaction(null,true);
     		foreach($roles as $role){
+    			// only role created by loggedIn person can be added
+    			$createdById = $role->getAttribute('createdById');
+    			if(PersonSession::getPersonId() != $createdById && !PersonSession::hasPerson('systemAdmin') && !$isSuperUserTransaction){
+    				throw new NoAccessException('No access to add role '.$role->getAttribute('accountName'));
+    			}
+    			// add role
     			PersonRole::create(array(
     					"personId"=>$this->id,
     					"roleId"=>$role->getAttribute("id")
@@ -218,13 +222,18 @@ class Person extends Account {
      * @access ("person|systemAdmin","function|canEdit")
      */
     function removeRoles($roles){
-    	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
-    	if(!is_array($roles)) throw new BadInputException("$roles is not array");
-    	if(!self::UpdateAccess()){ throw new NoAccessException('No access to remove');} // force the access check
-    	 
+    	if(!is_array($roles)) throw new BadInputException("1st parameter is not an array");
+    	$this->checkAccess($this, 'UpdateAccess', 'No access to remove roles'); // force the access check
     	try{
+    		$isSuperUserTransaction = TransactionManager::isSuperUser();
     		TransactionManager::startTransaction(null,true);
     		foreach($roles as $role){
+    			// only role created by loggedIn person can be removed
+    			$createdById = $role->getAttribute('createdById');
+    			if(PersonSession::getPersonId() != $createdById && !PersonSession::hasPerson('systemAdmin') && !$isSuperUserTransaction){
+    				throw new NoAccessException('No access to remove role '.$role->getAttribute('accountName'));
+    			}
+    			// remove role
     			$personRole = new PersonRole($this->id,$role->getAttribute("id"));
     			$personRole->delete();
     		}

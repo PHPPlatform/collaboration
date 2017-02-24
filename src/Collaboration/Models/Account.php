@@ -143,13 +143,21 @@ abstract class Account extends Model {
      * @access ("person|systemAdmin","function|canEdit")
      */
     function setAttributes($args){
-    	$args["modified"] = MySql::getMysqlDate(null,true);
-    	
     	try{
     		TransactionManager::startTransaction();
+    		
+    		if(!isset($args["modified"])){
+    			$args["modified"] = MySql::getMysqlDate(null,true);
+    		}
 
     		if(isset($args["contactId"])){
     			throw new BadInputException("contactId can not be set , please set contact instead");
+    		}
+    		if(isset($args["createdById"])){
+    			throw new BadInputException("createdById can not be set");
+    		}
+    		if(isset($args["created"])){
+    			throw new BadInputException("created can not be set");
     		}
     		
     		// modify contact

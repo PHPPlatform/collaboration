@@ -130,17 +130,20 @@ class Role extends Account {
     
     protected static function canRead($args = array()){
     	$readExpr = parent::canRead($args);
-    	if(PersonSession::hasRole('roleReader')){
-    		// can read all the role he belongs to
-    		$belongingOrgs = PersonSession::getRoles();
-    		if(count($belongingOrgs) > 0 ){
-    			$accountClass = get_parent_class();
-    			$accountNameExpr = "{".$accountClass."."."accountName"."}";
-    			$dbs = TransactionManager::getConnection();
-    			$belongingOrgsStr = "'".implode("','", $dbs->escape_string($belongingOrgs))."'";
-    
-    			$readExpr = "($readExpr) OR $accountNameExpr in ($belongingOrgsStr)";
-    		}
+    	// can read all the roles he belongs to
+    	$belongingRoles = PersonSession::getRoles();
+    	if(count($belongingRoles) > 0 ){
+    		$accountClass = get_parent_class();
+    		$accountNameExpr = "{".$accountClass."."."accountName"."}";
+    		$dbs = TransactionManager::getConnection();
+    	
+    		$belongingRoles = array_map(function($belongingRole) use ($dbs){
+    			return $dbs->escape_string($belongingRole);
+    		}, $belongingRoles);
+    	
+    		$belongingOrgsStr = "'".implode("','", $belongingRoles)."'";
+    			 
+    		$readExpr = "($readExpr) OR $accountNameExpr in ($belongingOrgsStr)";
     	}
     	return $readExpr;
     }
