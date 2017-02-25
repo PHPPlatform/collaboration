@@ -8,7 +8,6 @@ namespace PhpPlatform\Collaboration\Models;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 use PhpPlatform\Persist\TransactionManager;
-use PhpPlatform\Persist\Exception\ObjectStateException;
 use PhpPlatform\Collaboration\Util\PersonSession;
 
 /**
@@ -283,7 +282,6 @@ class Organization extends Account {
      * @return Person[][]
      */
     function getPeople($type = null){
-    	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
     	$allowedTypes = array(OrganizationPerson::TYPE_OWNER,OrganizationPerson::TYPE_ADMINISTRATOR,OrganizationPerson::TYPE_MEMBER);
     	if($type == null){
     		$type = $allowedTypes;
@@ -352,7 +350,6 @@ class Organization extends Account {
      * @access ("person|systemAdmin","function|canEdit")
      */
     function addPeople($people, $type = OrganizationPerson::TYPE_MEMBER){
-    	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
         if(!is_array($people)) throw new BadInputException("1st parameter is not an array");
         self::checkAccess($this, 'UpdateAccess', 'No access to add people'); // force the access check
         
@@ -394,7 +391,6 @@ class Organization extends Account {
      * @access ("person|systemAdmin","function|canEdit")
      */
     function removePeople($people){
-    	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
         if(!is_array($people)) throw new BadInputException("1st parameter is not an array");
         self::checkAccess($this, 'UpdateAccess', 'No access to remove people'); // force the access check
         try{

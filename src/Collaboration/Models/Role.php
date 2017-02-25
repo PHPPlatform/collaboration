@@ -6,7 +6,6 @@
 namespace PhpPlatform\Collaboration\Models;
 
 
-use PhpPlatform\Persist\Exception\ObjectStateException;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Collaboration\Util\PersonSession;
 
@@ -108,7 +107,6 @@ class Role extends Account {
      * @return Person[]
      */
     function getPeople(){
-    	if(!$this->isObjectInitialised) throw new ObjectStateException("Object Not initialised");
     	try{
     		TransactionManager::startTransaction(null,true);
     		$personRoleObjs = PersonRole::find(array("roleId"=>$this->id));

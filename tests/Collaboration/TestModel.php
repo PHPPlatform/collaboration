@@ -21,16 +21,9 @@ class TestModel extends TestBase{
         $this->assertTrue(!$isException);
 
         $TSampleReflection = new \ReflectionClass(get_class($tSample));
-        $isObjectInitialisedReflection = $TSampleReflection->getProperty("isObjectInitialised");
-        $isObjectInitialisedReflection->setAccessible(true);
-
-        // test for no argument constructor
-        $tSample = new SampleModel();
-        $this->assertTrue(!$isObjectInitialisedReflection->getValue($tSample));
 
         // test for constructor with argument
         $tSample = new SampleModel(1);
-        $this->assertTrue($isObjectInitialisedReflection->getValue($tSample));
 
         $fProperty1Reflection = $TSampleReflection->getProperty("property1");
         $fProperty1Reflection->setAccessible(true);

@@ -6,14 +6,12 @@
 namespace PhpPlatform\Collaboration\Models;
 
 
-use PhpPlatform\Persist\Exception\ObjectStateException;
-use PhpPlatform\Persist\TransactionManager;
-use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Collaboration\Session;
+use PhpPlatform\Collaboration\Util\PersonSession;
+use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 use PhpPlatform\Errors\Exceptions\Application\ProgrammingError;
-use PhpPlatform\Collaboration\Util\PersonSession;
-use PhpPlatform\Errors\Exceptions\Application\ApplicationException;
+use PhpPlatform\Persist\TransactionManager;
 
 /**
  * @tableName person

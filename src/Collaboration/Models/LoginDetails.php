@@ -277,9 +277,6 @@ class LoginDetails extends Model {
     				"password"=>$password
     		));
     		
-    		// uninitialize this object
-    		$this->isObjectInitialised = false;
-    		
     		TransactionManager::commitTransaction();
     	}catch (\Exception $e){
     		TransactionManager::abortTransaction();
