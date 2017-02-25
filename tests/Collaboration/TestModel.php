@@ -20,7 +20,7 @@ class TestModel extends TestBase{
         }
         $this->assertTrue($isException);
 
-        $TSampleReflection = new \ReflectionClass(get_class($tSample));
+        $TSampleReflection = new \ReflectionClass('PhpPlatform\Tests\Collaboration\SampleModels\SampleModel');
 
         // test for constructor with argument
         $tSample = new SampleModel(1);

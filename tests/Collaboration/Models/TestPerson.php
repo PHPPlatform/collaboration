@@ -11,6 +11,7 @@ use PhpPlatform\Persist\Reflection;
 use PhpPlatform\Collaboration\Models\Role;
 use PhpPlatform\Collaboration\Models\Organization;
 use PhpPlatform\Collaboration\Models\ComposedRoles;
+use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 
 class TestPerson extends TestBase {
 	
@@ -529,6 +530,16 @@ class TestPerson extends TestBase {
 		}
 		parent::assertTrue($isException);
 		parent::assertCount(3, $this->personCreator->getRoles());
+		
+		
+		// invalid input
+		$isException = false;
+		try{
+			$this->personCreator->addRoles("role2");
+		}catch (BadInputException $e){
+			$isException = true;
+			parent::assertEquals('1st parameter is not an array', $e->getMessage());
+		}
 		
 	}
 	
