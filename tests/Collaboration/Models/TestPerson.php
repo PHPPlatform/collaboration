@@ -12,6 +12,7 @@ use PhpPlatform\Collaboration\Models\Role;
 use PhpPlatform\Collaboration\Models\Organization;
 use PhpPlatform\Collaboration\Models\ComposedRoles;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
+use PhpPlatform\Collaboration\Util\PersonSession;
 
 class TestPerson extends TestBase {
 	
@@ -540,6 +541,51 @@ class TestPerson extends TestBase {
 			$isException = true;
 			parent::assertEquals('1st parameter is not an array', $e->getMessage());
 		}
+		
+	}
+	
+	function testRegister(){
+		
+		// register with out session
+		$registrationToken = Person::register("testPerson1", "testPerson1", array());
+		
+		// validate registration token
+		LoginDetails::verify("testPerson1", $registrationToken);
+		
+		// validate loggedin session
+		$loginDetails = new LoginDetails("testPerson1");
+		parent::assertEquals($loginDetails->getAttribute('personId'), PersonSession::getPersonId());
+		
+		// register with duplicate login name
+		$isException = false;
+		try{
+			$registrationToken = Person::register("testPerson1", "testPerson1", array());
+		}catch (BadInputException $e){
+			$isException = true;
+			parent::assertEquals("Login name testPerson1 already exists", $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+		
+		// register with session
+		$registrationToken = Person::register("testPerson2", "testPerson2", array());
+		
+		// validate login is not changed
+		parent::assertEquals($loginDetails->getAttribute('personId'), PersonSession::getPersonId());
+		
+		// validate registration token with out logging in 
+		$isException = false;
+		try{
+     		LoginDetails::verify("testPerson2", $registrationToken);
+		}catch (NoAccessException $e){
+			$isException = true;
+			parent::assertEquals("User don't have access to verify testPerson2", $e->getMessage());
+		}
+		
+		$this->login("testPerson2", "testPerson2");
+		
+		// validate registration token
+		LoginDetails::verify("testPerson2", $registrationToken);
 		
 	}
 	

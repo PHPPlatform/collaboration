@@ -258,7 +258,7 @@ class Person extends Account {
      * 
      * @return string RegistrationToken to be sent to login email or mobile or other channels to verify registration
      */
-    static protected function register($loginName,$password,$data){
+    static function register($loginName,$password,$data){
     	$accountName = substr(md5($loginName),0,15);
     	try{
     		TransactionManager::startTransaction(null,true);
@@ -266,7 +266,7 @@ class Person extends Account {
     		//check if loginName exists
     		$loginDetails = LoginDetails::find(array("loginName"=>$loginName));
     		if(count($loginDetails) > 0){
-    			throw new BadInputException("Login name '$loginName' already exists ");
+    			throw new BadInputException("Login name $loginName already exists");
     		}
     		
     		// create account
