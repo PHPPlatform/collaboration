@@ -432,12 +432,12 @@ class TestPerson extends TestBase {
 		$this->login('personCreator1', 'personCreator1');
 		
 		$roles = $this->personCreator->getRoles(); // personCreator, orgCreator, roleCreator, role1
-		parent::assertCount(3, $roles);
+		parent::assertCount(4, $roles);
 		$roleNames = array_map(function($role){return $role->getAttribute('accountName');},$roles);
 		parent::assertEquals(array('personCreator', 'orgCreator', 'roleCreator', 'role1'), $roleNames);
 		
-		$roles = $this->personCreator->getRoles(true); // personCreator, orgCreator, role1, role2, role3, role4
-		parent::assertCount(6, $roles);
+		$roles = $this->personCreator->getRoles(true); // personCreator, orgCreator, roleCreator, role1, role2, role3, role4
+		parent::assertCount(7, $roles);
 		$roleNames = array_map(function($role){return $role->getAttribute('accountName');},$roles);
 		parent::assertEquals(array('personCreator','orgCreator', 'roleCreator', 'role1','role2','role3','role4'), $roleNames);
 		

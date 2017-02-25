@@ -14,7 +14,6 @@ use PhpPlatform\Persist\MySql;
 use PhpPlatform\Config\Settings;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Persist\Reflection;
-use PhpPlatform\Persist\Exception\ObjectStateException;
 use PhpPlatform\Mock\Config\MockSettings;
 
 class TestLoginDetails extends TestBase {
@@ -806,14 +805,6 @@ class TestLoginDetails extends TestBase {
 			$isException = true;
 		}
 		parent::assertTrue(!$isException);
-		
-		$isException = false;
-		try{
-			$testPerson1LoginDetails->getAttribute('loginName');
-		}catch (ObjectStateException $e){
-			$isException = true;
-		}
-		parent::assertTrue($isException);
 		
 		$isException = false;
 		try{

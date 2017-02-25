@@ -10,15 +10,14 @@ class TestModel extends TestBase{
 
     public function testConstruct(){
 
-        // test for no exceptions while constructing
+        // test for with empty arguments
         $isException = false;
         try{
             $tSample = new SampleModel();
-        }catch (\Exception $e){
-            echo $e;
+        }catch (BadQueryException $e){
             $isException = true;
         }
-        $this->assertTrue(!$isException);
+        $this->assertTrue($isException);
 
         $TSampleReflection = new \ReflectionClass(get_class($tSample));
 
