@@ -4,6 +4,7 @@ namespace PhpPlatform\Tests\Collaboration;
 
 
 use PhpPlatform\Tests\Collaboration\SampleModels\SampleModel;
+use PhpPlatform\Errors\Exceptions\Persistence\BadQueryException;
 
 class TestModel extends TestBase{
     

@@ -403,9 +403,7 @@ class LoginDetails extends Model {
             
             $savedToken = $loginId.md5($loginId.$loginName.$token);
 
-            $tmpLoginHistory = new LoginHistory();
-
-            $existingPasswordResetRequests = $tmpLoginHistory->find(array(
+            $existingPasswordResetRequests = LoginHistory::find(array(
                 "sessionId"=>$savedToken,
                 "type"=>LoginHistory::LH_PASSWORD_RESET_REQUEST,
                 "logindetailsId"=>$loginId
@@ -454,8 +452,7 @@ class LoginDetails extends Model {
             $loginId = $loginDetails->getAttribute("id");
             $loginPersonId = $loginDetails->getAttribute("personId");
             
-            $tmpLoginHistory = new LoginHistory();
-            $existingPasswordResetRequests = $tmpLoginHistory->find(array(
+            $existingPasswordResetRequests = LoginHistory::find(array(
                 "sessionId"=>array(
                     self::OPERATOR_IN => array(
                         $loginId.md5($loginId.$loginName.$token),
