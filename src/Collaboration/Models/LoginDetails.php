@@ -295,7 +295,7 @@ class LoginDetails extends Model {
     	// to compensate timing attack
     	time_nanosleep(0, rand(0,1000));
     	if($this->password !== $encryptedPassword ){
-    		throw new NoAccessException('Invalid loginName or password');
+    		throw new NoAccessException('Invalid Login Name or Password');
     	}
     	
     	$loggedInTime = MySql::getMysqlDate(null,true);

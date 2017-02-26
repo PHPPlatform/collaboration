@@ -259,7 +259,6 @@ class Person extends Account {
      * @return string RegistrationToken to be sent to login email or mobile or other channels to verify registration
      */
     static function register($loginName,$password,$data){
-    	$accountName = substr(md5($loginName),0,15);
     	try{
     		TransactionManager::startTransaction(null,true);
     		
@@ -270,7 +269,9 @@ class Person extends Account {
     		}
     		
     		// create account
-    		$data["accountName"] = $accountName;
+    		if(!array_key_exists("accountName", $data)){
+    			$data["accountName"] = substr(md5($loginName),0,15);
+    		}
     		$registeredPerson = self::create($data);
     		 
     		// create login details
@@ -310,7 +311,7 @@ class Person extends Account {
     		$loginDetailsList = LoginDetails::find(array("loginName"=>$loginName,"status"=>array(self::OPERATOR_IN=>array(LoginDetails::STATUS_ACTIVE,LoginDetails::STATUS_PENDING_VERIFICATION))));
     		
     		if(count($loginDetailsList) != 1){
-    			throw new NoAccessException("Invalid loginName or Password");
+    			throw new NoAccessException("Invalid Login Name or Password");
     		}
     		$loginDetails = $loginDetailsList[0];
     		
@@ -324,9 +325,6 @@ class Person extends Account {
             PersonSession::update($loggedInPerson, $loginDetails);
     		
     		TransactionManager::commitTransaction();
-    	}catch (DataNotFoundException $dnfe){
-    		TransactionManager::abortTransaction();
-    		throw new BadInputException("Login Name '$loginName' does not exist",$dnfe);
     	}catch (\Exception $e){
     		TransactionManager::abortTransaction();
     		throw $e;
@@ -336,9 +334,9 @@ class Person extends Account {
     static function logout(){
     	try{
     		TransactionManager::startTransaction(null,true);
-    		$loggedInPerson = PersonSession::getPerson();
-    		if($loggedInPerson != null){
-    			$loginDetails = new LoginDetails($loggedInPerson["id"]);
+    		$loginName = PersonSession::getLoginName();
+    		if(isset($loginName)){
+    			$loginDetails = new LoginDetails($loginName);
     			$loginDetails->logout();
     			PersonSession::clear();
     		}else{

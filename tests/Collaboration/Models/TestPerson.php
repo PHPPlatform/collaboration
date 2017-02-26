@@ -13,6 +13,8 @@ use PhpPlatform\Collaboration\Models\Organization;
 use PhpPlatform\Collaboration\Models\ComposedRoles;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Collaboration\Util\PersonSession;
+use PhpPlatform\Collaboration\Session;
+use PhpPlatform\Collaboration\Models\LoginHistory;
 
 class TestPerson extends TestBase {
 	
@@ -586,6 +588,194 @@ class TestPerson extends TestBase {
 		
 		// validate registration token
 		LoginDetails::verify("testPerson2", $registrationToken);
+		
+		
+		$personInfo = array(
+				"accountName" => "test_Person3",
+				"firstName"=>"Test",
+				"lastName" => "Person",
+				"middleName" => "3",
+				"dob" => "1987-01-02",
+				"contact"=>array(
+						"email"=>"testPerson3@example.com",
+						"phone"=>"7894561230"
+				)
+				
+		);
+		
+		// validate data passed as argument
+		Person::register("testPerson3", "testPerson3", $personInfo);
+		
+		$testPerson3 = null;
+		TransactionManager::executeInTransaction(function() use (&$testPerson3){
+			$testPerson3 = Person::find(array("firstName"=>"Test","middleName"=>"3"));
+			$testPerson3 = $testPerson3[0];
+		},array(),true);
+		
+		$personInfo["dob"] = "02-Jan-1987";
+		parent::assertArraySubset($personInfo, $testPerson3->getAttributes("*"));
+		
+	}
+	
+	function testLogin(){
+		
+		// invalid username
+		$isException = false;
+		try{
+			Person::login('personCreator', 'personCreator1');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+			parent::assertEquals('Invalid Login Name or Password', $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+		// invalid password
+		$isException = false;
+		try{
+			Person::login('personCreator1', 'personCreator');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+			parent::assertEquals('Invalid Login Name or Password', $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+		// invalid username and password 
+		$isException = false;
+		try{
+			Person::login('personCreator', 'personCreator');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+			parent::assertEquals('Invalid Login Name or Password', $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+		
+		// try logging in disabled login details
+		TransactionManager::executeInTransaction(function() {
+			$loginDetails = new LoginDetails('personForTest1');
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_DISABLED)));
+		},array(),true);
+		
+		
+		$isException = false;
+		try{
+			Person::login('personForTest1', 'personForTest1');
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+			parent::assertEquals('Invalid Login Name or Password', $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+		// --------------------------------------------------------
+		$this->login(); // clear current login
+		
+		// save some data in session before login
+		Session::getInstance()->set("sessionKey1","sessionValue1");
+		
+		// normal login
+		Person::login('personCreator1', 'personCreator1');
+		parent::assertEquals($this->personCreator->getAttributes("*"),PersonSession::getPerson());
+		
+		// validate the data saved before login
+		parent::assertEquals("sessionValue1", Session::getInstance()->get("sessionKey1"));
+		
+		// loggin in with PENDING VERIFICATION, shoud not generate accounts in fo in session
+		Organization::create(array("accountName"=>"myOrg1","name"=>"My Org 1"));
+		$this->login(); // clear current login
+		TransactionManager::executeInTransaction(function() {
+			$loginDetails = new LoginDetails('personCreator1');
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginDetails,array(array("status"=>LoginDetails::STATUS_PENDING_VERIFICATION)));
+		},array(),true);
+		
+		Person::login('personCreator1', 'personCreator1');
+		parent::assertEquals($this->personCreator->getAttributes("*"),PersonSession::getPerson());
+		parent::assertEquals(array(),PersonSession::getOrganizations());
+		parent::assertEquals(array(),PersonSession::getRoles());
+		
+	}
+	
+	function testLogout(){
+		// logout with out session
+		$isException = false;
+		try{
+			Person::logout();
+		}catch (\PhpPlatform\Errors\Exceptions\Application\NoAccessException $e){
+			$isException = true;
+			parent::assertEquals('Session is not logged in', $e->getMessage());
+		}
+		parent::assertTrue($isException);
+		
+		
+		// login
+		Person::login('personCreator1', 'personCreator1');
+		
+		// save some data in session before logout
+		Session::getInstance()->set("sessionKey1","sessionValue1");
+		
+		// normal logout
+		Person::logout();
+		
+		parent::assertEquals(null, PersonSession::getLoginName());
+		parent::assertEquals(null, PersonSession::getPerson());
+		parent::assertEquals(array(), PersonSession::getAccounts());
+		
+		// validate the data saved before logout
+		parent::assertEquals(null, Session::getInstance()->get("sessionKey1"));
+		
+		
+	}
+	
+	function testGetLoginHistory(){
+		// register with out session
+		$registrationToken = Person::register("testPerson1", "testPerson1", array("accountName"=>"testPerson1"));
+		
+		sleep(1);
+
+		// validate registration token
+		LoginDetails::verify("testPerson1", $registrationToken);
+		
+		sleep(1);
+		
+		Person::logout();
+		
+		sleep(1);
+		
+		$token = LoginDetails::requestPasswordReset("testPerson1");
+		
+		sleep(1);
+		
+		$validationToken = LoginDetails::validatePasswordResetToken("testPerson1", $token);
+		
+		sleep(1);
+		
+		LoginDetails::resetPassword("testPerson1", $token, $validationToken, "testPerson12");
+		
+		sleep(1);
+		
+		Person::login('testPerson1', 'testPerson12');
+		
+		$testPerson1 = new Person(null,"testPerson1");
+		$loginDeatils = new LoginDetails("testPerson1");
+		
+		sleep(1);
+		
+		$loginDeatils->disable();
+		
+		$loginHistoryItems = $testPerson1->getLoginHistory();
+		
+		$loginHistoryItemsTypeExpected = array(
+				LoginHistory::LH_DISABLED,	
+				LoginHistory::LH_LOGIN,
+				LoginHistory::LH_PASSWORD_RESET,
+				LoginHistory::LH_PASSWORD_RESET_REQUEST,
+				LoginHistory::LH_LOGOUT,
+				LoginHistory::LH_ACTIVATED,
+				LoginHistory::LH_LOGIN
+		);
+		
+		for($i = 0; $i < 7; $i++){
+			parent::assertEquals($loginHistoryItemsTypeExpected[$i], $loginHistoryItems[$i]["type"]);
+		}
 		
 	}
 	

@@ -9,14 +9,17 @@ use PhpPlatform\Collaboration\Session;
 
 class PersonSession {
 	
-	const SESSION_ACCOUNTS = 'SESSION_ACCOUNTS';
-	const SESSION_PERSON = 'SESSION_PERSON';
-
+	private static $SESSION_ACCOUNTS = 'SESSION_ACCOUNTS';
+	private static $SESSION_PERSON = 'SESSION_PERSON';
+    private static $SESSION_LOGINNAME = 'SESSION_LOGINNAME'; 
+	
+	
 	static public function update(Person $loggedInPerson,LoginDetails $loginDetails){
 		
 		// save account info in session
-		Session::getInstance()->refresh();
-		Session::getInstance()->set(self::SESSION_PERSON,$loggedInPerson->getAttributes("*"));
+		Session::getInstance()->refresh(true,true);
+		Session::getInstance()->set(self::$SESSION_PERSON,$loggedInPerson->getAttributes("*"));
+		Session::getInstance()->set(self::$SESSION_LOGINNAME,$loginDetails->getAttribute('loginName'));
 		
 		$sessionAccounts = array();
 		$sessionAccounts["person"] = array($loggedInPerson->getAttribute('accountName'));
@@ -42,7 +45,7 @@ class PersonSession {
 			$sessionAccounts["role"] = $roleNames;
 		}
 
-		Session::getInstance()->set(self::SESSION_ACCOUNTS, $sessionAccounts);
+		Session::getInstance()->set(self::$SESSION_ACCOUNTS, $sessionAccounts);
 	}
 	
 	static public function clear(){
@@ -67,7 +70,7 @@ class PersonSession {
 	}
 	
 	static public function getAccounts($type = null){
-		$sessionKey = self::SESSION_ACCOUNTS;
+		$sessionKey = self::$SESSION_ACCOUNTS;
 		if(isset($type)){
 			$sessionKey .= ".$type";
 		}
@@ -92,7 +95,7 @@ class PersonSession {
 	}
 	
 	static public function getPerson(){
-		return Session::getInstance()->get(self::SESSION_PERSON);
+		return Session::getInstance()->get(self::$SESSION_PERSON);
 	}
 	
 	static public function getPersonId(){
@@ -101,6 +104,10 @@ class PersonSession {
 			return $personSession['id'];
 		}
 		return false;
+	}
+	
+	static public function getLoginName(){
+		return Session::getInstance()->get(self::$SESSION_LOGINNAME);
 	}
 	
 }
