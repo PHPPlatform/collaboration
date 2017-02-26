@@ -8,6 +8,9 @@ namespace PhpPlatform\Collaboration\Models;
 
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Collaboration\Util\PersonSession;
+use PhpPlatform\Errors\Exceptions\Application\BadInputException;
+use PhpPlatform\Errors\Exceptions\Persistence\DataNotFoundException;
+use PhpPlatform\Errors\Exceptions\Persistence\NoAccessException;
 
 /**
  * @tableName role
@@ -48,7 +51,7 @@ class Role extends Account {
      * @param array $data
      * @return Role
      * 
-     * @access inherit
+     * @access ("role|roleCreator",inherit)
      */
     static function create($data){
         return parent::create($data);
@@ -75,23 +78,30 @@ class Role extends Account {
         parent::delete();
     }
 
+    /**
+     * @param string $name
+     * @param string $value
+     * 
+     * @return Role
+     */
     function setAttribute($name,$value){
         $args = array();
         $args[$name] = $value;
-        $this->setAttributes($args);
+        return $this->setAttributes($args);
     }
     
     /**
+     * @param array $args
+     * @return Role
+     * 
      * @access inherit
      */
     function setAttributes($args){
-        parent::setAttributes($args);
+        return parent::setAttributes($args);
     }
 
     function getAttribute($name){
-        $args = array();
-        $args[] = $name;
-        $attrValues = $this->getAttributes($args);
+        $attrValues = $this->getAttributes(array($name));
         return $attrValues[$name];
     }
 
@@ -99,6 +109,88 @@ class Role extends Account {
         $attributes =  parent::getAttributes($args);
         return $attributes;
     }
+    
+    // composed roles manupulation
+    
+    /**
+     * @return Role[]
+     */
+    function getComposedRoles(){
+    	try{
+    		TransactionManager::startTransaction(null,true);
+    		$composedRoleObjs = ComposedRoles::find(array("roleId"=>$this->id));
+    		$composedRoleIds = array_map(function($composedRoleObj){return $composedRoleObj->getAttribute("composedRoleId");}, $composedRoleObjs);
+    		TransactionManager::commitTransaction();
+    	}catch (\Exception $e){
+    		TransactionManager::abortTransaction();
+    		throw $e;
+    	}
+    	return Role::find(array("id"=>array(self::OPERATOR_IN=>$composedRoleIds)));
+    }
+    
+    
+    /**
+     * @param Role[] $roles
+     * @throws BadInputException
+     * 
+     * @return Role
+     * 
+     * @access ("person|systemAdmin","function|canEdit")
+     */
+    function addComposedRoles($roles){
+    	if(!is_array($roles)) throw new BadInputException("1st parameter is not an array");
+    	self::checkAccess($this, 'UpdateAccess', 'No access to add composed roles'); // force the access check
+    	try{
+    		TransactionManager::startTransaction();
+    		foreach($roles as $role){
+    			self::checkAccess($role, 'UpdateAccess', 'No access to add as composed role');
+    			$roleId = $this->id;
+    			$composedRoleId = $role->id;
+    			TransactionManager::executeInTransaction(function() use($roleId,$composedRoleId){
+    				ComposedRoles::create(array("roleId"=>$roleId,"composedRoleId"=>$composedRoleId));
+    			},array(),true);
+    		}
+    		TransactionManager::commitTransaction();
+    	}catch (\Exception $e){
+    		TransactionManager::abortTransaction();
+    		throw $e;
+    	}
+    	return $this;
+    }
+    
+    /**
+     * @param Role[] $roles
+     * @throws BadInputException
+     *
+     * @return Role
+     *
+     * @access ("person|systemAdmin","function|canEdit")
+     */
+    function removeComposedRoles($roles){
+    	if(!is_array($roles)) throw new BadInputException("1st parameter is not an array");
+    	self::checkAccess($this, 'UpdateAccess', 'No access to remove composed roles'); // force the access check
+    	try{
+    		TransactionManager::startTransaction();
+    		foreach($roles as $role){
+    			self::checkAccess($role, 'UpdateAccess', 'No access to remove composed roles');
+    			$roleId = $this->id;
+    			$composedRoleId = $role->id;
+    			TransactionManager::executeInTransaction(function() use($roleId,$composedRoleId){
+    				$composedRole = new ComposedRoles($roleId,$composedRoleId);
+    				$composedRole->delete();
+    			},array(),true);
+    		}
+    		TransactionManager::commitTransaction();
+    	}catch (DataNotFoundException $e){
+    		TransactionManager::abortTransaction();
+    		throw new BadInputException($this->getAttribute('accountName')." and ".$role->getAttribute('accountName')." are not connected");
+    	}catch (\Exception $e){
+    		TransactionManager::abortTransaction();
+    		throw $e;
+    	}
+    	return $this;
+    }
+    
     
     // connected people manupulations //
     
@@ -122,10 +214,6 @@ class Role extends Account {
     	return Person::find(array("id"=>array(self::OPERATOR_IN=>$personIds)));
     }
     
-    protected static function canCreate($data = array()){
-    	return PersonSession::hasRole('roleCreator');
-    }
-    
     protected static function canRead($args = array()){
     	$readExpr = parent::canRead($args);
     	// can read all the roles he belongs to
@@ -146,24 +234,5 @@ class Role extends Account {
     	return $readExpr;
     }
     
-    protected function canEdit($args){
-    	$canEdit = parent::canEdit($args);
-    	if(!$canEdit && PersonSession::hasRole('roleEditor')){
-    		$belongingOrgs = PersonSession::getRoles();
-    		$canEdit = in_array($this->getAttribute('accountName'), $belongingOrgs);
-    	}
-    	return $canEdit;
-    }
-    
-    protected function canDelete(){
-    	$canDelete = parent::canDelete();
-    	if(!$canDelete && PersonSession::hasRole('roleEraser')){
-    		$belongingOrgs = PersonSession::getRoles();
-    		$canDelete = in_array($this->getAttribute('accountName'), $belongingOrgs);
-    	}
-    	return $canDelete;
-    }
-    
-
 }
 ?>

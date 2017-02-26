@@ -139,6 +139,8 @@ abstract class Account extends Model {
     /**
      * @param $args
      * @throws \Exception
+     * 
+     * @return Account
      *
      * @access ("person|systemAdmin","function|canEdit")
      */

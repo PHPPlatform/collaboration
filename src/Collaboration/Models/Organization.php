@@ -118,11 +118,20 @@ class Organization extends Account {
     	return parent::find($filters, $sort, $pagination, $where);
     }
 
+    /**
+     * @param string $name
+     * @param string $value
+     *
+     * @return Organization
+     */
     function setAttribute($name,$value){
         return parent::setAttribute($name, $value);
     }
 
     /**
+     * @param array $args
+     * @return Organization
+     * 
      * @access inherit
      */
     function setAttributes($args){

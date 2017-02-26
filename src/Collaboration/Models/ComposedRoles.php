@@ -4,6 +4,7 @@ namespace PhpPlatform\Collaboration\Models;
 
 use PhpPlatform\Collaboration\Model;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
+use PhpPlatform\Persist\TransactionManager;
 
 /**
  * @tableName composed_roles
@@ -40,6 +41,13 @@ class ComposedRoles extends Model {
 	 * @access ("person|systemAdmin")
 	 */
 	static function create($data){
+		$roleId = $data["roleId"];
+		$composedRoleId = $data["composedRoleId"];
+		$composedRolesOfChild = array($composedRoleId);
+		ComposedRoles::generateComposedRoleIds($composedRolesOfChild);
+		if(in_array($roleId, $composedRolesOfChild)){
+			throw new BadInputException("cyclic composition is not allowed");
+		}
 		return parent::create($data);
 	}
 	
@@ -70,13 +78,24 @@ class ComposedRoles extends Model {
 	}
 	
 	static function generateComposedRoleIds(&$roleIds){
+		try{
+			TransactionManager::startTransaction(null,true);
+			self::_generateComposedRoleIds($roleIds);
+			TransactionManager::commitTransaction();
+		}catch (\Exception $e){
+			TransactionManager::abortTransaction();
+			throw $e;
+		}
+	}
+	
+	private static function _generateComposedRoleIds(&$roleIds){
 		if(!is_array($roleIds)){
 			throw new BadInputException("Parameter 1 must be array");
 		}
 		if(count($roleIds) == 0){
 			return;
 		}
-		$newRoleIds = array(); 
+		$newRoleIds = array();
 		$composedRoleObjs = ComposedRoles::find(array("roleId"=>array(self::OPERATOR_IN=>$roleIds)));
 		foreach ($composedRoleObjs as $composedRoleObj){
 			$composedRoleId = $composedRoleObj->composedRoleId;
@@ -84,9 +103,8 @@ class ComposedRoles extends Model {
 				$newRoleIds[] = $composedRoleId;
 			}
 		}
-		self::generateComposedRoleIds($newRoleIds);
+		self::_generateComposedRoleIds($newRoleIds);
 		$roleIds = array_merge($roleIds,$newRoleIds);
-		
 	}
 	
 }

@@ -61,18 +61,27 @@ class Contact extends Model {
 		return parent::find($filters, $sort, $pagination, $where);
 	}
 	
+	/**
+	 * @param string $name
+	 * @param string $value
+	 * 
+	 * @return Contact
+	 */
 	function setAttribute($name, $value){
 		return parent::setAttribute($name, $value);
 	}
 	
 	/**
+	 * @param array $args 
+	 * @return Contact
+	 * 
      * @access ("person|systemAdmin")
 	 */
 	function setAttributes($args){
 		if(array_key_exists("info", $args)){
 			$args["info"] = json_encode($args["info"]);
 		}
-		parent::setAttributes($args);
+		return parent::setAttributes($args);
 	}
 	
 	function getAttribute($name){

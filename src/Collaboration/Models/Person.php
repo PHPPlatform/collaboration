@@ -116,15 +116,23 @@ class Person extends Account {
         parent::delete();
     }
 
+    /**
+     * @param string $name
+     * @param string $value
+     * @return Person
+     */
     function setAttribute($name,$value){
     	return parent::setAttribute($name, $value);
     }
 
     /**
+     * @param array $args
+     * @return Person
+     * 
      * @access inherit
      */
     function setAttributes($args){
-        parent::setAttributes($args);
+        return parent::setAttributes($args);
     }
 
     function getAttribute($name){
