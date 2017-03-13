@@ -335,16 +335,16 @@
         },
         {
             "name": "php-platform/persist-unit",
-            "version": "v0.1.2",
+            "version": "v0.1.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPPlatform/persist-unit.git",
-                "reference": "a715525da7e334c67838e0ce28db467f86ceeee8"
+                "reference": "8053498d8ef60d4d3f2faab2dd97c3a71cc9126c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPPlatform/persist-unit/zipball/a715525da7e334c67838e0ce28db467f86ceeee8",
-                "reference": "a715525da7e334c67838e0ce28db467f86ceeee8",
+                "url": "https://api.github.com/repos/PHPPlatform/persist-unit/zipball/8053498d8ef60d4d3f2faab2dd97c3a71cc9126c",
+                "reference": "8053498d8ef60d4d3f2faab2dd97c3a71cc9126c",
                 "shasum": ""
             },
             "require": {
@@ -380,7 +380,7 @@
                 "relational Schema",
                 "unit-test"
             ],
-            "time": "2017-02-27T08:46:52+00:00"
+            "time": "2017-03-13T14:58:03+00:00"
         },
         {
             "name": "phpdocumentor/reflection-common",
