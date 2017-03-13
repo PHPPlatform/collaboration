@@ -5,7 +5,6 @@ use PhpPlatform\Tests\Collaboration\TestBase;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Collaboration\Models\Person;
 use PhpPlatform\Errors\Exceptions\Persistence\NoAccessException;
-use PhpPlatform\Persist\MySql;
 use PhpPlatform\Collaboration\Models\LoginDetails;
 use PhpPlatform\Persist\Reflection;
 use PhpPlatform\Collaboration\Models\Role;
@@ -139,13 +138,18 @@ class TestPerson extends TestBase {
 		parent::assertEquals("testPerson2", $person2->getAttribute("accountName"));
 		parent::assertEquals("test Person 2", $person2->getAttribute("firstName"));
 	
+		$connection = null;
+		TransactionManager::executeInTransaction(function() use(&$connection){
+			$connection = TransactionManager::getConnection();
+		});
+		
 	
 		// create with complete data
 		$person3 = Person::create(array(
 				"firstName"  => "Test",
 				"middleName" => "Person",
 				"lastName"   => "3",
-				"dob"        => MySql::getMysqlDate("01st Jan 1987"),
+				"dob"        => $connection->formatDate("01st Jan 1987"),
 				"gender"     => Person::GENDER_MALE,
 				"contact"    => array(
 						"emailId" => "testPerson3@gmail.com",
@@ -612,7 +616,6 @@ class TestPerson extends TestBase {
 			$testPerson3 = $testPerson3[0];
 		},array(),true);
 		
-		$personInfo["dob"] = "02-Jan-1987";
 		parent::assertArraySubset($personInfo, $testPerson3->getAttributes("*"));
 		
 	}

@@ -6,7 +6,6 @@
 namespace PhpPlatform\Collaboration\Models;
 
 use PhpPlatform\Collaboration\Model;
-use PhpPlatform\Persist\MySql;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Collaboration\Util\PersonSession;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
@@ -84,13 +83,14 @@ abstract class Account extends Model {
         	$sessionPersonId = $sessionPerson["id"];
         }
         $data['createdById'] = $sessionPersonId;
-
-        $currentDate = MySql::getMysqlDate(null,true);
-        $data['created'] = $currentDate;
-        $data['modified'] = $currentDate;
         
         try{
         	TransactionManager::startTransaction();
+        	
+        	$connection = TransactionManager::getConnection();
+        	$currentDate = $connection->formatDate(null,true);
+        	$data['created'] = $currentDate;
+        	$data['modified'] = $currentDate;
         	
         	// create contact
         	$contactId = null;
@@ -149,7 +149,8 @@ abstract class Account extends Model {
     		TransactionManager::startTransaction();
     		
     		if(!isset($args["modified"])){
-    			$args["modified"] = MySql::getMysqlDate(null,true);
+    			$connection = TransactionManager::getConnection();
+    			$args["modified"] = $connection->formatDate(null,true);
     		}
 
     		if(isset($args["contactId"])){

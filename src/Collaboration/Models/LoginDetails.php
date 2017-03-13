@@ -9,7 +9,6 @@ use PhpPlatform\Collaboration\Model;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Config\Settings;
-use PhpPlatform\Persist\MySql;
 use PhpPlatform\Collaboration\Util\PersonSession;
 use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 use PhpPlatform\Errors\Exceptions\Persistence\DataNotFoundException;
@@ -93,7 +92,9 @@ class LoginDetails extends Model {
     		$loginDetails = parent::create($data);
     		$loginDetails->changePassword($data["password"]);
     		
-    		$createToken = $loginDetails->personId.md5($loginDetails->personId.rand(1,1000).MySql::getMysqlDate(null,true).$loginDetails->id);
+    		$connection = TransactionManager::getConnection();
+    		
+    		$createToken = $loginDetails->personId.md5($loginDetails->personId.rand(1,1000).$connection->formatDate(null,true).$loginDetails->id);
     		
     		LoginHistory::create(array(
     				"logindetailsId"=>$loginDetails->id,
@@ -298,13 +299,13 @@ class LoginDetails extends Model {
     		throw new NoAccessException('Invalid Login Name or Password');
     	}
     	
-    	$loggedInTime = MySql::getMysqlDate(null,true);
-    	
     	if(Settings::getSettings(self::$thisPackageName,"saveLoginHistory")){
     	    // add login history in superUser's Transaction
     	    try{
     	    	TransactionManager::startTransaction(null,true);
     	    	
+    	    	$connection = TransactionManager::getConnection();
+    	    	$loggedInTime = $connection->formatDate(null,true);
     	    	LoginHistory::create(array(
     	    			"logindetailsId" => $this->id,
     	    			"type"=>LoginHistory::LH_LOGIN,
@@ -322,14 +323,14 @@ class LoginDetails extends Model {
 
 
     function logout(){
-
-         $loggedOutTime = MySql::getMysqlDate(null,true);
-
+         
          if(Settings::getSettings(self::$thisPackageName,"saveLoginHistory")){
          	// add login history in superUser's Transaction
          	try{
          		TransactionManager::startTransaction(null,true);
-         	
+         		
+         		$connection = TransactionManager::getConnection();
+         		$loggedOutTime = $connection->formatDate(null,true);
          		LoginHistory::create(array(
          				"logindetailsId" => $this->id,
          				"type"=>LoginHistory::LH_LOGOUT,
@@ -374,7 +375,7 @@ class LoginDetails extends Model {
         	$loginId = $loginDetails->getAttribute("id");
         	$loginPersonId = $loginDetails->getAttribute("personId");
         	
-        	$token = md5(uniqid(MySql::getMysqlDate(null,true).$loginId.$loginPersonId.$loginName,true));
+        	$token = md5(uniqid(time().$loginId.$loginPersonId.$loginName,true));
         	
         	$savedToken = $loginId.md5($loginId.$loginName.$token);
         
@@ -415,7 +416,9 @@ class LoginDetails extends Model {
             }
 
             // check if Password reset request is not expired
-            $currentTime = MySql::getMysqlDate(null,true);
+            
+            $connection = TransactionManager::getConnection();
+            $currentTime = $connection->formatDate(null,true);
             $passwordResetRequestTime = $existingPasswordResetRequests[0]->getAttribute("time");
 
             $differenceTime = strtotime($currentTime) - strtotime($passwordResetRequestTime);
@@ -479,16 +482,17 @@ class LoginDetails extends Model {
                 throw new BadInputException("invalid tokens $token or $validationToken");
             }
             
+            $connection = TransactionManager::getConnection();
             
             // validate for matching token and validationToken
             $validationTime = $validationTokenObj->getAttribute("time");
-            $validationTime = MySql::getMysqlDate($validationTime,true);
+            $validationTime = $connection->formatDate($validationTime,true);
             if($validationToken !== md5($loginPersonId.$validationTime.md5($validationTime.$token.$loginName))){
                 throw new BadInputException("$token and $validationToken does not match");
             }
 
             // check for validation token lifetime
-            $currentTime = MySql::getMysqlDate(null,true);
+            $currentTime = $connection->formatDate(null,true);
             $differenceTime = strtotime($currentTime) - strtotime($validationTime);
             if($differenceTime > Settings::getSettings(Model::$thisPackageName,'passwordResetRequestValidationLifetime')){
                 throw new BadInputException("Password reset request validation token '$validationToken' expired");

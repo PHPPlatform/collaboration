@@ -4,10 +4,10 @@
     <php>
         <const name="WEB_RESOURCE_PATH" value=""/>
         <const name="WEB_SERVER_FILEPATH" value=""/>
-        <const name="MYSQL_HOST" value=""/>
-	    <const name="MYSQL_PORT" value=""/>
-	    <const name="MYSQL_USERNAME" value=""/>
-	    <const name="MYSQL_PASSWORD" value=""/>
+        <const name="MYSQL_HOST" value="localhost"/>
+	    <const name="MYSQL_PORT" value="3306"/>
+	    <const name="MYSQL_USERNAME" value="root"/>
+	    <const name="MYSQL_PASSWORD" value="root"/>
     </php>
     <testsuites>
         <testsuite name="php-platform\collaboration">

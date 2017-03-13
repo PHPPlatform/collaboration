@@ -10,7 +10,6 @@ use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Collaboration\Util\PersonSession;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Errors\Exceptions\Persistence\DataNotFoundException;
-use PhpPlatform\Errors\Exceptions\Persistence\NoAccessException;
 
 /**
  * @tableName role

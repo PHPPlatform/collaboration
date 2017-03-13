@@ -10,7 +10,6 @@ use PhpPlatform\Errors\Exceptions\Persistence\BadQueryException;
 use PhpPlatform\Persist\TransactionManager;
 use PhpPlatform\Collaboration\Models\Person;
 use PhpPlatform\Collaboration\Models\LoginHistory;
-use PhpPlatform\Persist\MySql;
 use PhpPlatform\Config\Settings;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Persist\Reflection;
@@ -310,7 +309,9 @@ class TestLoginDetails extends TestBase {
 			$tokenLifetime = Settings::getSettings('php-platform/collaboration','passwordResetRequestLifetime');
 			$expiredTime = $currentTime - $tokenLifetime -1;
 			$expiredTime = date('d-M-Y H:i:s',$expiredTime);
-			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginHistories[0],array(array("time"=>MySql::getMysqlDate($expiredTime,true))));
+			
+			$connection = TransactionManager::getConnection();
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginHistories[0],array(array("time"=>$connection->formatDate($expiredTime,true))));
 		},array(),true);
 		
 		$isException = false;
@@ -374,7 +375,8 @@ class TestLoginDetails extends TestBase {
 			$tokenLifetime = Settings::getSettings('php-platform/collaboration','passwordResetRequestValidationLifetime');
 			$expiredTime = $currentTime - $tokenLifetime -1;
 			$expiredTime = date('d-M-Y H:i:s',$expiredTime);
-			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginHistories[0],array(array("time"=>MySql::getMysqlDate($expiredTime,true))));
+			$connection = TransactionManager::getConnection();
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginHistories[0],array(array("time"=>$connection->formatDate($expiredTime,true))));
 		},array(),true);
 		
 	
@@ -388,7 +390,8 @@ class TestLoginDetails extends TestBase {
 	
 		//manually reset expired token
 		TransactionManager::executeInTransaction(function () use (&$loginHistories,&$validTime){
-			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginHistories[0],array(array("time"=>MySql::getMysqlDate($validTime,true))));
+			$connection = TransactionManager::getConnection();
+			Reflection::invokeArgs('PhpPlatform\Persist\Model', 'setAttributes', $loginHistories[0],array(array("time"=>$connection->formatDate($validTime,true))));
 		},array(),true);
 		
 	    // reset password

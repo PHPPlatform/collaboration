@@ -13,7 +13,6 @@ use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Collaboration\Models\Person;
 use PhpPlatform\Collaboration\Models\LoginDetails;
 use PhpPlatform\Persist\Reflection;
-use PhpPlatform\Persist\MySql;
 
 class TestAccount extends TestBase {
 	
@@ -217,7 +216,12 @@ class TestAccount extends TestBase {
 		// try updating created
 		$isException = false;
 		try{
-			$sampleAccount->setAttribute("created",MySql::getMysqlDate("2017-01-01 01:01:01",true));
+			$connection = null;
+			TransactionManager::executeInTransaction(function () use(&$connection){
+				$connection = TransactionManager::getConnection();
+			});
+			
+			$sampleAccount->setAttribute("created",$connection->formatDate("2017-01-01 01:01:01",true));
 		}catch (BadInputException $e){
 			$isException = true;
 			parent::assertEquals("created can not be set", $e->getMessage());

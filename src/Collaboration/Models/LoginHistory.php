@@ -8,7 +8,7 @@ namespace PhpPlatform\Collaboration\Models;
 
 use PhpPlatform\Collaboration\Model;
 use PhpPlatform\Collaboration\Session;
-use PhpPlatform\Persist\MySql;
+use PhpPlatform\Persist\TransactionManager;
 
 /**
  * @tableName login_history
@@ -91,7 +91,10 @@ class LoginHistory extends Model {
     		$data["sessionId"] = Session::getInstance()->getId();
     	}
     	if(!array_key_exists("time", $data)){
-    		$data["time"] = MySql::getMysqlDate(null,true);
+    		TransactionManager::executeInTransaction(function() use (&$data){
+    			$connection = TransactionManager::getConnection();
+    			$data["time"] = $connection->formatDate(null,true);
+    		});
     	}
     	return parent::create($data);
     }
