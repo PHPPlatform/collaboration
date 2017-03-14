@@ -12,6 +12,8 @@ use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
 use PhpPlatform\Errors\Exceptions\Application\ProgrammingError;
 use PhpPlatform\Persist\TransactionManager;
+use PhpPlatform\Config\Settings;
+use PhpPlatform\Persist\Reflection;
 
 /**
  * @tableName person
@@ -331,6 +333,12 @@ class Person extends Account {
 
     		// save loggedIn Person's related accounts in session
             PersonSession::update($loggedInPerson, $loginDetails);
+            
+            // invoke session save providers if any
+            $sessionSaveProviders = Settings::getSettings(self::$thisPackageName,'session.saveProviders');
+            foreach ($sessionSaveProviders as $sessionSaveProvider){
+            	Reflection::invokeArgs($sessionSaveProvider["class"], $sessionSaveProvider["method"], null,array($loggedInPerson, $loginDetails));
+            }
     		
     		TransactionManager::commitTransaction();
     	}catch (\Exception $e){

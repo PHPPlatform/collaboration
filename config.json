@@ -4,6 +4,7 @@
     "passwordResetRequestValidationLifetime" : 120,
     "session" : {
         "cookieLifetime" : 600,
-        "savePath" : "sessions"
+        "savePath" : "sessions",
+        "saveProviders" : []
     }
 }
