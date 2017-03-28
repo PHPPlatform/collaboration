@@ -112,6 +112,7 @@ CREATE TABLE person_role
 (
     PERSON_ID bigint(10) unsigned NOT NULL,
     ROLE_ID bigint(10) unsigned NOT NULL,
+    EXPIRES_ON timestamp NULL default NULL,
     UNIQUE (PERSON_ID, ROLE_ID)
 );
 

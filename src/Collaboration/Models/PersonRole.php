@@ -29,6 +29,13 @@ class PersonRole extends Model {
      */
     private $roleId = null;
     
+    /**
+     * @columnName EXPIRES_ON
+     * @type timestamp
+     * @set
+     * @get
+     */
+    private $expiresOn = null;
 
     function __construct($personId = null, $roleId = null){
         $this->personId = $personId;
@@ -59,6 +66,19 @@ class PersonRole extends Model {
 	static function find($filters,$sort = null,$pagination = null, $where = null){
 		return parent::find($filters, $sort, $pagination, $where);
 	}
+	
+	
+	function getAttribute($name){
+		return parent::getAttribute($name);
+	}
+	
+	/**
+	 * @return PersonRole
+	 */
+	function setAttribute($name, $value){
+		return parent::setAttribute($name, $value);
+	}
+	
 	
 	/**
 	 * @access ("person|systemAdmin")

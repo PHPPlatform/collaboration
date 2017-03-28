@@ -418,12 +418,14 @@ class TestPerson extends TestBase {
 			$role2 = Role::create(array("accountName"=>"role2","name"=>"Role 2"));
 			$role3 = Role::create(array("accountName"=>"role3","name"=>"Role 3"));
 			$role4 = Role::create(array("accountName"=>"role4","name"=>"Role 4"));
+			$role5 = Role::create(array("accountName"=>"role5","name"=>"Role 5"));
 				
 			ComposedRoles::create(array("roleId"=>$role1->getAttribute('id'),"composedRoleId"=>$role2->getAttribute('id')));
 			ComposedRoles::create(array("roleId"=>$role2->getAttribute('id'),"composedRoleId"=>$role3->getAttribute('id')));
 			ComposedRoles::create(array("roleId"=>$role2->getAttribute('id'),"composedRoleId"=>$role4->getAttribute('id')));
 			
 			$personCreator->addRoles(array($role1));
+			$personCreator->addRoles(array($role5),strtotime("yesterday"));
 			$personForTest->addRoles(array($role2));
 			
 		},array(),true);
@@ -448,6 +450,12 @@ class TestPerson extends TestBase {
 		parent::assertCount(7, $roles);
 		$roleNames = array_map(function($role){return $role->getAttribute('accountName');},$roles);
 		parent::assertEquals(array('personCreator','orgCreator', 'roleCreator', 'role1','role2','role3','role4'), $roleNames);
+		
+		$roles = $this->personCreator->getRoles(true,true); // personCreator, orgCreator, roleCreator, role1, role2, role3, role4, role5
+		parent::assertCount(8, $roles);
+		$roleNames = array_map(function($role){return $role->getAttribute('accountName');},$roles);
+		parent::assertEquals(array('personCreator','orgCreator', 'roleCreator', 'role1','role2','role3','role4','role5'), $roleNames);
+		
 		
 		$this->login('personForTest1', 'personForTest1');
 		
@@ -515,6 +523,24 @@ class TestPerson extends TestBase {
 		// - remove own role
 		$this->personCreator->removeRoles(array($role1));
 		parent::assertCount(3, $this->personCreator->getRoles());
+		
+		// add own role with expiration date
+		$this->personCreator->addRoles(array($role1),strtotime("tomorrow"));
+		parent::assertCount(4, $this->personCreator->getRoles());
+		
+		// decrease expiration date
+		$this->personCreator->addRoles(array($role1),strtotime("yesterday"));
+		parent::assertCount(3, $this->personCreator->getRoles());
+		parent::assertCount(4, $this->personCreator->getRoles(false,true));
+		
+		// increase expiration date 
+		$this->personCreator->addRoles(array($role1),strtotime("tomorrow"));
+		parent::assertCount(4, $this->personCreator->getRoles());
+		
+		// - remove own role used for expiration date usecase
+		$this->personCreator->removeRoles(array($role1));
+		parent::assertCount(3, $this->personCreator->getRoles());
+		
 		
 		// + add other role
 		$isException = false;

@@ -174,12 +174,19 @@ class Person extends Account {
      * @throws Exception
      * @return Role[]
      */
-    function getRoles($includeComposed = false){
+    function getRoles($includeComposed = false,$includeExpired = false){
     	try{
     		TransactionManager::startTransaction(null,true);
     		$personRoleObjs = PersonRole::find(array("personId"=>$this->id));
     		$roleIds = array();
     		foreach ($personRoleObjs as $personRoleObj){
+    			if(!$includeExpired){
+    				$expiresOn = $personRoleObj->getAttribute('expiresOn');
+    				if(isset($expiresOn) && time() > strtotime($expiresOn)){
+    					// expired
+    					continue;
+    				}
+    			}
     			$roleIds[] = $personRoleObj->getAttribute("roleId");
     		}
     		if($includeComposed){
@@ -198,23 +205,44 @@ class Person extends Account {
      * 
      * @access ("person|systemAdmin","function|canEdit")
      */
-    function addRoles($roles){
+    function addRoles($roles,$expiresOn = null){
     	if(!is_array($roles)) throw new BadInputException("1st parameter is not an array");
     	$this->checkAccess($this, 'UpdateAccess', 'No access to add roles'); // force the access check
     	try{
     		$isSuperUserTransaction = TransactionManager::isSuperUser();
     		TransactionManager::startTransaction(null,true);
+    		
+    		$existingRoleObjs = PersonRole::find(array("personId"=>$this->id));
+    		$existingRoles = array();
+    		foreach ($existingRoleObjs as $existingRoleObj){
+    			$roleId = $existingRoleObj->getAttribute('roleId');
+    			$existingRoles[$roleId] = $existingRoleObj;
+    		}
+    		
+    		
     		foreach($roles as $role){
     			// only role created by loggedIn person can be added
     			$createdById = $role->getAttribute('createdById');
     			if(PersonSession::getPersonId() != $createdById && !PersonSession::hasPerson('systemAdmin') && !$isSuperUserTransaction){
     				throw new NoAccessException('No access to add role '.$role->getAttribute('accountName'));
     			}
-    			// add role
-    			PersonRole::create(array(
-    					"personId"=>$this->id,
-    					"roleId"=>$role->getAttribute("id")
-    			));
+    			
+    			$roleId = $role->getAttribute('id');
+    			if(array_key_exists($roleId, $existingRoles)){
+    				// if role is already added , update its expiresOn attribute
+    				if($expiresOn == null){
+    					$expiresOn = array("value"=>null);
+    				}
+    				$existingRoles[$roleId]->setAttribute('expiresOn', $expiresOn);
+    				
+    			}else{
+    				// add role
+    				PersonRole::create(array(
+    						"personId"=>$this->id,
+    						"roleId"=>$role->getAttribute("id"),
+    						"expiresOn"=>$expiresOn
+    				));
+    			}
     		}
     		TransactionManager::commitTransaction();
     	}catch (\Exception $e){
