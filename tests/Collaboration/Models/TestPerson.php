@@ -12,8 +12,8 @@ use PhpPlatform\Collaboration\Models\Organization;
 use PhpPlatform\Collaboration\Models\ComposedRoles;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Collaboration\Util\PersonSession;
-use PhpPlatform\Collaboration\Session;
 use PhpPlatform\Collaboration\Models\LoginHistory;
+use PhpPlatform\Session\Factory;
 
 class TestPerson extends TestBase {
 	
@@ -699,14 +699,14 @@ class TestPerson extends TestBase {
 		$this->login(); // clear current login
 		
 		// save some data in session before login
-		Session::getInstance()->set("sessionKey1","sessionValue1");
+		Factory::getSession()->set("sessionKey1","sessionValue1");
 		
 		// normal login
 		Person::login('personCreator1', 'personCreator1');
 		parent::assertEquals($this->personCreator->getAttributes("*"),PersonSession::getPerson());
 		
 		// validate the data saved before login
-		parent::assertEquals("sessionValue1", Session::getInstance()->get("sessionKey1"));
+		parent::assertEquals("sessionValue1", Factory::getSession()->get("sessionKey1"));
 		
 		// loggin in with PENDING VERIFICATION, shoud not generate accounts in fo in session
 		Organization::create(array("accountName"=>"myOrg1","name"=>"My Org 1"));
@@ -739,7 +739,7 @@ class TestPerson extends TestBase {
 		Person::login('personCreator1', 'personCreator1');
 		
 		// save some data in session before logout
-		Session::getInstance()->set("sessionKey1","sessionValue1");
+		Factory::getSession()->set("sessionKey1","sessionValue1");
 		
 		// normal logout
 		Person::logout();
@@ -749,7 +749,7 @@ class TestPerson extends TestBase {
 		parent::assertEquals(array(), PersonSession::getAccounts());
 		
 		// validate the data saved before logout
-		parent::assertEquals(null, Session::getInstance()->get("sessionKey1"));
+		parent::assertEquals(null, Factory::getSession()->get("sessionKey1"));
 		
 		
 	}

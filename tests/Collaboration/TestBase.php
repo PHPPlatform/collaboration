@@ -3,11 +3,12 @@
 namespace PhpPlatform\Tests\Collaboration;
 
 use PhpPlatform\Persist\RelationalMappingCache;
-use PhpPlatform\Collaboration\Session;
 use PhpPlatform\Collaboration\Models\Person;
 use PhpPlatform\Tests\PersistUnit\ModelTest as PersistUnitTestCase;
-use PhpPlatform\Persist\Reflection;
 use PhpPlatform\Collaboration\Util\PersonSession;
+use PhpPlatform\Session\Factory;
+use PhpPlatform\Session\Session;
+use PhpPlatform\Mock\Config\MockSettings;
 
 
 abstract class TestBase extends PersistUnitTestCase{
@@ -38,11 +39,15 @@ abstract class TestBase extends PersistUnitTestCase{
     	return $caches;
     }
     
+    static function setUpBeforeClass(){
+    	parent::setUpBeforeClass();
+    	MockSettings::setSettings('php-platform/session', 'session.class', 'PhpPlatform\Tests\Collaboration\SessionImpl');
+    }
+    
     function setUp(){
     	parent::setUp();
 	    // clear session
-    	$thisInstance = Session::getInstance();
-    	Reflection::invokeArgs(get_parent_class($thisInstance), 'reset', $thisInstance);
+	    Factory::getSession()->reset(Session::RESET_DELETE_OLD);
     }
     
     public function setSystemAdminSession(){
@@ -50,11 +55,10 @@ abstract class TestBase extends PersistUnitTestCase{
     }
     
     public function login($loginName = null,$password = null){
-    	PersonSession::clear();
+    	PersonSession::reset();
     	if(isset($loginName)){
     		Person::login($loginName, $password);
     	}
     }
-    
     
 }

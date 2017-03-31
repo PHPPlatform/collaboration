@@ -5,7 +5,8 @@ use PhpPlatform\Collaboration\Models\Person;
 use PhpPlatform\Collaboration\Models\LoginDetails;
 use PhpPlatform\Collaboration\Models\Organization;
 use PhpPlatform\Collaboration\Models\Role;
-use PhpPlatform\Collaboration\Session;
+use PhpPlatform\Session\Factory;
+use PhpPlatform\Session\Session;
 
 class PersonSession {
 	
@@ -16,10 +17,10 @@ class PersonSession {
 	
 	static public function update(Person $loggedInPerson,LoginDetails $loginDetails){
 		
+		Factory::getSession()->reset(Session::RESET_COPY_OLD | Session::RESET_DELETE_OLD);
 		// save account info in session
-		Session::getInstance()->refresh(true,true);
-		Session::getInstance()->set(self::$SESSION_PERSON,$loggedInPerson->getAttributes("*"));
-		Session::getInstance()->set(self::$SESSION_LOGINNAME,$loginDetails->getAttribute('loginName'));
+		Factory::getSession()->set(self::$SESSION_PERSON,$loggedInPerson->getAttributes("*"));
+		Factory::getSession()->set(self::$SESSION_LOGINNAME,$loginDetails->getAttribute('loginName'));
 		
 		$sessionAccounts = array();
 		$sessionAccounts["person"] = array($loggedInPerson->getAttribute('accountName'));
@@ -45,11 +46,11 @@ class PersonSession {
 			$sessionAccounts["role"] = $roleNames;
 		}
 
-		Session::getInstance()->set(self::$SESSION_ACCOUNTS, $sessionAccounts);
+		Factory::getSession()->set(self::$SESSION_ACCOUNTS, $sessionAccounts);
 	}
 	
-	static public function clear(){
-		return Session::getInstance()->reset();
+	static public function reset(){
+		return Factory::getSession()->reset(Session::RESET_DELETE_OLD);
 	}
 	
 	static private function has($account,$type){
@@ -75,7 +76,7 @@ class PersonSession {
 			$sessionKey .= ".$type";
 		}
 		
-		$sessionAccounts = Session::getInstance()->get($sessionKey);
+		$sessionAccounts = Factory::getSession()->get($sessionKey);
 		if(!is_array($sessionAccounts)){
 			$sessionAccounts = array();
 		}
@@ -95,7 +96,7 @@ class PersonSession {
 	}
 	
 	static public function getPerson(){
-		return Session::getInstance()->get(self::$SESSION_PERSON);
+		return Factory::getSession()->get(self::$SESSION_PERSON);
 	}
 	
 	static public function getPersonId(){
@@ -107,7 +108,7 @@ class PersonSession {
 	}
 	
 	static public function getLoginName(){
-		return Session::getInstance()->get(self::$SESSION_LOGINNAME);
+		return Factory::getSession()->get(self::$SESSION_LOGINNAME);
 	}
 	
 }
