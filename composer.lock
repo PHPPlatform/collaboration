@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "de56714059cec556b5f82159a603180b",
+    "content-hash": "3e08968153b48ae09820218b4ca3b8d9",
     "packages": [
         {
             "name": "php-platform/annotations",
@@ -144,12 +144,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPPlatform/json-cache.git",
-                "reference": "0c6621fda8247c4720a74fbc9fdf42c4bb68cb1f"
+                "reference": "e9279ab977a16d586023c2b99d343f3d8c497d9a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPPlatform/json-cache/zipball/0c6621fda8247c4720a74fbc9fdf42c4bb68cb1f",
-                "reference": "0c6621fda8247c4720a74fbc9fdf42c4bb68cb1f",
+                "url": "https://api.github.com/repos/PHPPlatform/json-cache/zipball/e9279ab977a16d586023c2b99d343f3d8c497d9a",
+                "reference": "e9279ab977a16d586023c2b99d343f3d8c497d9a",
                 "shasum": ""
             },
             "require": {
@@ -181,7 +181,7 @@
                 "metadata",
                 "php-platform"
             ],
-            "time": "2017-01-19 14:15:38"
+            "time": "2017-03-31 09:46:34"
         },
         {
             "name": "php-platform/persist",
@@ -231,6 +231,52 @@
                 "relational Schema"
             ],
             "time": "2017-03-28 14:47:49"
+        },
+        {
+            "name": "php-platform/session",
+            "version": "v0.1.x-dev",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PHPPlatform/session.git",
+                "reference": "7b4fafa12ccc4b67c161cb1d15166151e2291424"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PHPPlatform/session/zipball/7b4fafa12ccc4b67c161cb1d15166151e2291424",
+                "reference": "7b4fafa12ccc4b67c161cb1d15166151e2291424",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3",
+                "php-platform/config": "~0.1",
+                "php-platform/errors": "~0.1"
+            },
+            "require-dev": {
+                "php-platform/mock-config": "~0.1",
+                "phpunit/phpunit": "~4.8"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "PhpPlatform\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "authors": [
+                {
+                    "name": "Raghavendra K R",
+                    "email": "krraghavendra@yahoo.co.in",
+                    "homepage": "http://krraghavendra.in",
+                    "role": "Software Developer"
+                }
+            ],
+            "homepage": "https://github.com/PHPPlatform/session",
+            "keywords": [
+                "collaboration",
+                "php session",
+                "session"
+            ],
+            "time": "2017-03-29 17:05:05"
         }
     ],
     "packages-dev": [

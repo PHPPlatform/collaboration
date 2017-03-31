@@ -6,7 +6,6 @@
 namespace PhpPlatform\Collaboration\Models;
 
 
-use PhpPlatform\Collaboration\Session;
 use PhpPlatform\Collaboration\Util\PersonSession;
 use PhpPlatform\Errors\Exceptions\Application\BadInputException;
 use PhpPlatform\Errors\Exceptions\Application\NoAccessException;
@@ -382,7 +381,7 @@ class Person extends Account {
     		if(isset($loginName)){
     			$loginDetails = new LoginDetails($loginName);
     			$loginDetails->logout();
-    			PersonSession::clear();
+    			PersonSession::reset();
     		}else{
     			throw new NoAccessException("Session is not logged in");
     		}

@@ -7,8 +7,8 @@ namespace PhpPlatform\Collaboration\Models;
 
 
 use PhpPlatform\Collaboration\Model;
-use PhpPlatform\Collaboration\Session;
 use PhpPlatform\Persist\TransactionManager;
+use PhpPlatform\Session\Factory;
 
 /**
  * @tableName login_history
@@ -88,7 +88,7 @@ class LoginHistory extends Model {
     static function create($data){
     	$data["loginIp"] = self::getUserIP();
     	if(!array_key_exists("sessionId", $data)){
-    		$data["sessionId"] = Session::getInstance()->getId();
+    		$data["sessionId"] = Factory::getSession()->getId();
     	}
     	if(!array_key_exists("time", $data)){
     		TransactionManager::executeInTransaction(function() use (&$data){

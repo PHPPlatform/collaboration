@@ -21,7 +21,8 @@
 	"require" : {
 		"php" : ">=5.3",
 		"php-platform/config" : "~0.1",
-		"php-platform/persist" : "~0.1"
+		"php-platform/persist" : "~0.1",
+		"php-platform/session" : "~0.1"
 	},
 	"require-dev" : {
 		"php-platform/persist-unit" : "~0.1"
